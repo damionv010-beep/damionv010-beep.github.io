@@ -113,6 +113,13 @@ async function claimAdmin(){
 }
 async function load(){vehicles=await api('/rest/v1/vehicles?select=*&order=tow_date.desc')||[]}
 const title=v=>[v.year,v.make,v.model].filter(Boolean).join(' ')||'Vehicle';
+function localDateTimeValue(value){
+  if(!value)return '';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime()))return '';
+  const pad=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 const impoundLabel=v=>({
   police_impound:'Police Impound',
   motor_vehicle_accident:'Motor Vehicle Accident',
@@ -179,6 +186,7 @@ function detail(id){
   '</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+
   '</div><div><span>Impound type</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Picked up from</span>'+esc(v.yard_location||'—')+
   '</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>'+
+  '<button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button>'+
   '<div class="card"><div class="small muted">TOW DETAILS</div>'+
   '<select id="vehicleImpoundType" class="input">'+
   '<option value="" '+(!v.impound_type?'selected':'')+'>Not specified</option>'+
@@ -205,6 +213,99 @@ function detail(id){
   '\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div></div>'+
   '<div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p>'+
   '<button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
+}
+
+
+async function editVehicleForm(){
+  if(!selected)return;
+  const v=selected;
+  let agencyName='';
+  try{
+    if(v.agency_id){
+      const rows=await api('/rest/v1/agencies?select=name&id=eq.'+encodeURIComponent(v.agency_id));
+      if(rows&&rows.length)agencyName=rows[0].name||'';
+    }
+  }catch(e){
+    console.warn('Could not load agency name',e);
+  }
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Cancel</button><div class="h1">Edit Vehicle</div>'+
+  '<div class="card"><div class="small muted">VEHICLE INFORMATION</div>'+
+  '<div class="row"><input id="editYear" class="input" inputmode="numeric" placeholder="Year" value="'+esc(v.year||'')+'"><input id="editColor" class="input" placeholder="Color" value="'+esc(v.color||'')+'"></div>'+
+  '<input id="editMake" class="input" placeholder="Make" value="'+esc(v.make||'')+'"><input id="editModel" class="input" placeholder="Model" value="'+esc(v.model||'')+'">'+
+  '<div class="row"><input id="editPlate" class="input" placeholder="Plate" value="'+esc(v.plate||'')+'"><input id="editState" class="input" placeholder="State" value="'+esc(v.plate_state||'OR')+'"></div>'+
+  '<input id="editVin" class="input" placeholder="VIN" autocapitalize="characters" value="'+esc(v.vin||'')+'">'+
+  '<div class="small muted">TOW DATE / TIME</div><input id="editTowDate" class="input" type="datetime-local" value="'+esc(localDateTimeValue(v.tow_date))+'">'+
+  '<div class="small muted">AGENCY</div><input id="editAgency" class="input" placeholder="Agency" value="'+esc(agencyName)+'">'+
+  '<div class="small muted">IMPOUND TYPE</div><select id="editImpoundType" class="input">'+
+  '<option value="" '+(!v.impound_type?'selected':'')+'>Not specified</option>'+
+  '<option value="police_impound" '+(v.impound_type==='police_impound'?'selected':'')+'>Police Impound</option>'+
+  '<option value="motor_vehicle_accident" '+(v.impound_type==='motor_vehicle_accident'?'selected':'')+'>Motor Vehicle Accident</option>'+
+  '<option value="preference_motor_vehicle_accident" '+(v.impound_type==='preference_motor_vehicle_accident'?'selected':'')+'>Preference Motor Vehicle Accident</option>'+
+  '<option value="private_party_impound" '+(v.impound_type==='private_party_impound'?'selected':'')+'>Private Party Impound</option></select>'+
+  '<div class="small muted">PICKED UP FROM</div><input id="editPickup" class="input" placeholder="Address or location vehicle was picked up from" value="'+esc(v.yard_location||'')+'">'+
+  '<div class="small muted">VEHICLE STATUS</div><select id="editStatus" class="input">'+
+  '<option value="impounded" '+(v.status==='impounded'?'selected':'')+'>Impounded</option>'+
+  '<option value="hold" '+(v.status==='hold'?'selected':'')+'>Hold</option>'+
+  '<option value="released" '+(v.status==='released'?'selected':'')+'>Released</option>'+
+  '<option value="auction" '+(v.status==='auction'?'selected':'')+'>Auction</option>'+
+  '<option value="other" '+(v.status==='other'?'selected':'')+'>Other</option></select>'+
+  '<textarea id="editNotes" class="input" rows="4" placeholder="Staff notes">'+esc(v.notes||'')+'</textarea>'+
+  '<button class="btn" onclick="saveVehicleEdits()">Save Vehicle Changes</button>'+
+  '<button class="btn secondary" onclick="detail(\''+v.id+'\')">Cancel</button></div>';
+}
+
+async function saveVehicleEdits(){
+  if(!selected)return;
+  try{
+    const id=selected.id;
+    let agency_id=null;
+    const agencyName=document.getElementById('editAgency').value.trim();
+    if(agencyName){
+      let a=await api('/rest/v1/agencies?select=id,name&name=eq.'+encodeURIComponent(agencyName));
+      if(a.length)agency_id=a[0].id;
+      else{
+        a=await api('/rest/v1/agencies',{
+          method:'POST',
+          headers:{'Content-Type':'application/json',Prefer:'return=representation'},
+          body:JSON.stringify({name:agencyName})
+        });
+        agency_id=a[0].id;
+      }
+    }
+    const yearValue=document.getElementById('editYear').value.trim();
+    const towDateValue=document.getElementById('editTowDate').value;
+    let tow_date=selected.tow_date;
+    if(towDateValue){
+      const parsed=new Date(towDateValue);
+      if(Number.isNaN(parsed.getTime()))throw new Error('Tow date/time is invalid.');
+      tow_date=parsed.toISOString();
+    }
+    const body={
+      year:yearValue?Number(yearValue):null,
+      make:document.getElementById('editMake').value.trim()||null,
+      model:document.getElementById('editModel').value.trim()||null,
+      color:document.getElementById('editColor').value.trim()||null,
+      plate:document.getElementById('editPlate').value.trim()||null,
+      plate_state:document.getElementById('editState').value.trim().toUpperCase()||null,
+      vin:document.getElementById('editVin').value.trim().toUpperCase()||null,
+      tow_date,
+      agency_id,
+      impound_type:document.getElementById('editImpoundType').value||null,
+      yard_location:document.getElementById('editPickup').value.trim()||null,
+      status:document.getElementById('editStatus').value,
+      notes:document.getElementById('editNotes').value.trim()||null
+    };
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json',Prefer:'return=representation'},
+      body:JSON.stringify(body)
+    });
+    await load();
+    detail(id);
+    alert('Vehicle updated.');
+  }catch(e){
+    alert('Vehicle update failed: '+e.message);
+  }
 }
 
 async function updateTowDetails(){
