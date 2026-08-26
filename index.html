@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TowTag">
+<meta name="apple-mobile-web-app-title" content="Mike’s Cascade Towing Yard">
 <meta name="theme-color" content="#0b0d10">
-<title>TowTag</title>
+<title>Mike’s Cascade Towing Yard</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0d10;--card:#15191f;--line:#29313a;--text:#f5f7fa;--muted:#98a3ae;--green:#76ff03}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-height:100vh;padding:max(18px,env(safe-area-inset-top)) 16px max(32px,env(safe-area-inset-bottom))}
-.brand{font-size:32px;font-weight:900;letter-spacing:-.7px}.brand b{color:var(--green)}.muted{color:var(--muted)}.small{font-size:12px}
+.brand{font-size:32px;font-weight:900;letter-spacing:-.7px}.brand b{color:var(--green)}.site-name{font-size:14px;font-weight:800;letter-spacing:.2px;margin-top:3px}.site-name span{color:var(--green)}.muted{color:var(--muted)}.small{font-size:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
 .input{width:100%;background:#101419;border:1px solid var(--line);border-radius:12px;padding:13px;color:#fff;margin:5px 0 10px;font-size:16px}
 .btn{border:0;border-radius:13px;padding:14px 15px;font-weight:800;background:var(--green);color:#071003;width:100%;margin-top:8px}
@@ -66,7 +66,7 @@ async function api(path,opt={}){
   return d;
 }
 function loginScreen(msg=''){
-  app.innerHTML='<div style="padding-top:10vh"><div class="brand">Tow<b>Tag</b></div><p class="muted">Vehicle impound records + QR tags</p>'+msg+
+  app.innerHTML='<div style="padding-top:10vh"><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><p class="muted">Vehicle impound records + QR tags</p>'+msg+
   '<div class="card"><label class="small muted">Email</label><input id="email" class="input" type="email" autocomplete="email" autocapitalize="none">'+
   '<label class="small muted">Password</label><input id="pw" class="input" type="password" autocomplete="current-password">'+
   '<button class="btn" onclick="login()">Sign In</button><button class="btn secondary" onclick="signup()">Create Account</button></div></div>';
@@ -97,7 +97,7 @@ async function boot(){
   }catch(e){loginScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
 function setupScreen(){
-  app.innerHTML='<div style="padding-top:8vh"><div class="brand">Tow<b>Tag</b></div><div class="card"><h2>Finish first-time setup</h2>'+
+  app.innerHTML='<div style="padding-top:8vh"><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card"><h2>Finish first-time setup</h2>'+
   '<p class="muted">Enter the one-time TowTag setup code from ChatGPT. This only creates the first administrator.</p>'+
   '<input id="setupCode" class="input" placeholder="Setup code" autocapitalize="characters">'+
   '<button class="btn" onclick="claimAdmin()">Activate TowTag Admin</button><button class="btn secondary" onclick="logout()">Sign Out</button></div></div>';
@@ -113,10 +113,16 @@ async function claimAdmin(){
 }
 async function load(){vehicles=await api('/rest/v1/vehicles?select=*&order=tow_date.desc')||[]}
 const title=v=>[v.year,v.make,v.model].filter(Boolean).join(' ')||'Vehicle';
+const impoundLabel=v=>({
+  police_impound:'Police Impound',
+  motor_vehicle_accident:'Motor Vehicle Accident',
+  preference_motor_vehicle_accident:'Preference Motor Vehicle Accident',
+  private_party_impound:'Private Party Impound'
+}[v]||'Not specified');
 
 function home(){
   selected=null;
-  app.innerHTML='<div class="top"><div><div class="brand">Tow<b>Tag</b></div><div class="muted small">'+vehicles.length+' vehicle'+(vehicles.length===1?'':'s')+
+  app.innerHTML='<div class="top"><div><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="muted small">'+vehicles.length+' vehicle'+(vehicles.length===1?'':'s')+
   '</div></div><button class="link" onclick="logout()">Sign Out</button></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Add Vehicle</button>'+
   '<button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
@@ -125,7 +131,7 @@ function home(){
 }
 function render(q){
   q=(q||'').toLowerCase();
-  const rows=vehicles.filter(v=>JSON.stringify([v.year,v.make,v.model,v.color,v.plate,v.vin,v.yard_location]).toLowerCase().includes(q));
+  const rows=vehicles.filter(v=>JSON.stringify([v.year,v.make,v.model,v.color,v.plate,v.vin,v.yard_location,v.impound_type]).toLowerCase().includes(q));
   document.getElementById('list').innerHTML=rows.map(v=>
     '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+
     '</div><div class="small muted" style="margin-top:7px">'+new Date(v.tow_date).toLocaleString()+' · <span class="pill">'+esc(v.status)+'</span></div></button>'
@@ -137,12 +143,17 @@ function addForm(){
   '<input id="make" class="input" placeholder="Make"><input id="model" class="input" placeholder="Model">'+
   '<div class="row"><input id="plate" class="input" placeholder="Plate"><input id="state" class="input" value="OR" placeholder="State"></div>'+
   '<input id="vin" class="input" placeholder="VIN" autocapitalize="characters"><input id="agency" class="input" placeholder="Agency">'+
-  '<input id="yard" class="input" placeholder="Yard location"><select id="status" class="input"><option value="impounded">Impounded</option>'+
+  '<div class="small muted">IMPOUND TYPE</div><select id="impoundType" class="input"><option value="">Select impound type…</option>'+
+  '<option value="police_impound">Police Impound</option><option value="motor_vehicle_accident">Motor Vehicle Accident</option>'+
+  '<option value="preference_motor_vehicle_accident">Preference Motor Vehicle Accident</option><option value="private_party_impound">Private Party Impound</option></select>'+
+  '<div class="small muted">PICKUP LOCATION</div><input id="yard" class="input" placeholder="Address or location vehicle was picked up from">'+
+  '<div class="small muted">VEHICLE STATUS</div><select id="status" class="input"><option value="impounded">Impounded</option>'+
   '<option value="hold">Hold</option><option value="released">Released</option><option value="auction">Auction</option><option value="other">Other</option></select>'+
   '<textarea id="notes" class="input" rows="4" placeholder="Staff notes"></textarea><button class="btn" onclick="saveVehicle()">Save & Generate TowTag</button></div>';
 }
 async function saveVehicle(){
   try{
+    if(!impoundType.value){alert('Choose an impound type.');return}
     let agency_id=null; const n=agency.value.trim();
     if(n){
       let a=await api('/rest/v1/agencies?select=id,name&name=eq.'+encodeURIComponent(n));
@@ -154,7 +165,7 @@ async function saveVehicle(){
     }
     const body={year:year.value?Number(year.value):null,make:make.value||null,model:model.value||null,color:color.value||null,
       plate:plate.value||null,plate_state:state.value||null,vin:vin.value||null,agency_id,yard_location:yard.value||null,
-      status:status.value,notes:notes.value||null,created_by:user.id};
+      impound_type:impoundType.value,status:status.value,notes:notes.value||null,created_by:user.id};
     const rows=await api('/rest/v1/vehicles',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});
     await load(); detail(rows[0].id);
   }catch(e){alert(e.message)}
@@ -166,8 +177,17 @@ function detail(id){
   app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+
   ' · <span class="pill">'+esc(v.status)+'</span></div><div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+
   '</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+
-  '</div><div><span>Yard location</span>'+esc(v.yard_location||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+
-  '</div></div>'+
+  '</div><div><span>Impound type</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Picked up from</span>'+esc(v.yard_location||'—')+
+  '</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>'+
+  '<div class="card"><div class="small muted">TOW DETAILS</div>'+
+  '<select id="vehicleImpoundType" class="input">'+
+  '<option value="" '+(!v.impound_type?'selected':'')+'>Not specified</option>'+
+  '<option value="police_impound" '+(v.impound_type==='police_impound'?'selected':'')+'>Police Impound</option>'+
+  '<option value="motor_vehicle_accident" '+(v.impound_type==='motor_vehicle_accident'?'selected':'')+'>Motor Vehicle Accident</option>'+
+  '<option value="preference_motor_vehicle_accident" '+(v.impound_type==='preference_motor_vehicle_accident'?'selected':'')+'>Preference Motor Vehicle Accident</option>'+
+  '<option value="private_party_impound" '+(v.impound_type==='private_party_impound'?'selected':'')+'>Private Party Impound</option>'+
+  '</select><input id="vehiclePickupLocation" class="input" value="'+esc(v.yard_location||'')+'" placeholder="Address or location vehicle was picked up from">'+
+  '<button class="btn" onclick="updateTowDetails()">Save Tow Details</button></div>'+
   '<div class="card"><div class="small muted">VEHICLE STATUS</div>'+
   '<select id="vehicleStatus" class="input">'+
   '<option value="impounded" '+(v.status==='impounded'?'selected':'')+'>Impounded</option>'+
@@ -177,11 +197,33 @@ function detail(id){
   '<option value="other" '+(v.status==='other'?'selected':'')+'>Other</option>'+
   '</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>'+
   '<div class="card" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div>'+
-  '<input id="photo" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhoto(this.files[0])">'+
-  '<div class="row"><button class="btn" onclick="photo.click()">Add Photo</button><button class="btn secondary" onclick="location.href=\''+publicUrl+
+  '<input id="cameraPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotos(this.files)">'+
+  '<input id="libraryPhoto" type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this.files)">'+
+  '<div class="small muted" style="margin-top:14px">VEHICLE PHOTOS</div>'+
+  '<div class="row"><button class="btn" onclick="cameraPhoto.click()">Take Photo</button><button class="btn secondary" onclick="libraryPhoto.click()">Choose From Photos</button></div>'+
+  '<div class="row"><button class="btn secondary" onclick="location.href=\''+publicUrl+
   '\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div></div>'+
   '<div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p>'+
   '<button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
+}
+
+async function updateTowDetails(){
+  if(!selected)return;
+  try{
+    const impound_type=document.getElementById('vehicleImpoundType').value||null;
+    const pickup=document.getElementById('vehiclePickupLocation').value.trim()||null;
+    const oldId=selected.id;
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(oldId),{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json',Prefer:'return=representation'},
+      body:JSON.stringify({impound_type,yard_location:pickup})
+    });
+    await load();
+    detail(oldId);
+    alert('Tow details updated.');
+  }catch(e){
+    alert('Tow details update failed: '+e.message);
+  }
 }
 
 async function updateVehicleStatus(){
@@ -230,17 +272,24 @@ async function deleteVehicle(){
   }
 }
 
-async function uploadPhoto(file){
-  if(!file||!selected)return;
+async function uploadPhotos(fileList){
+  if(!selected)return;
+  const files=Array.from(fileList||[]);
+  if(!files.length)return;
   try{
-    const ext=(file.name&&file.name.includes('.')?file.name.split('.').pop():'jpg').toLowerCase();
-    const path=selected.id+'/'+Date.now()+'.'+ext;
-    await api('/storage/v1/object/vehicle-photos/'+path,{method:'POST',headers:{'Content-Type':file.type||'image/jpeg','x-upsert':'false'},body:file});
-    await api('/rest/v1/vehicle_photos',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},
-      body:JSON.stringify({vehicle_id:selected.id,storage_path:path,created_by:user.id})});
-    alert('Photo added to TowTag.');
-  }catch(e){alert(e.message)}
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      let ext=(file.name&&file.name.includes('.')?file.name.split('.').pop():'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+      if(!ext)ext='jpg';
+      const path=selected.id+'/'+Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+      await api('/storage/v1/object/vehicle-photos/'+path,{method:'POST',headers:{'Content-Type':file.type||'image/jpeg','x-upsert':'false'},body:file});
+      await api('/rest/v1/vehicle_photos',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},
+        body:JSON.stringify({vehicle_id:selected.id,storage_path:path,created_by:user.id})});
+    }
+    alert(files.length===1?'Photo added to TowTag.':files.length+' photos added to TowTag.');
+  }catch(e){alert('Photo upload failed: '+e.message)}
 }
+
 async function shareTag(){
   const url=SITE+'?tag='+encodeURIComponent(selected.qr_token);
   if(navigator.share)await navigator.share({title:'TowTag '+title(selected),url});
@@ -249,20 +298,20 @@ async function shareTag(){
 function logout(){saveSession(null);loginScreen()}
 
 async function publicView(token){
-  app.innerHTML='<div class="brand">Tow<b>Tag</b></div><div class="card muted">Loading vehicle record…</div>';
+  app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card muted">Loading vehicle record…</div>';
   try{
     const r=await fetch(BASE+'/functions/v1/towtag-public-vehicle?token='+encodeURIComponent(token),{headers:{apikey:KEY}});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||'TowTag not found');
     const veh=[d.vehicle?.year,d.vehicle?.make,d.vehicle?.model].filter(Boolean).join(' ')||'Vehicle';
     const photos=(d.photos||[]).map(p=>'<figure><img src="'+esc(p.url)+'"><figcaption>'+esc(p.caption||'Vehicle photo')+'</figcaption></figure>').join('');
-    app.innerHTML='<div class="brand">Tow<b>Tag</b></div><div class="card"><div class="small muted">VEHICLE RECORD</div><div class="h1">'+esc(veh)+
+    app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card"><div class="small muted">VEHICLE RECORD</div><div class="h1">'+esc(veh)+
     '</div><div class="muted">'+esc(d.vehicle?.color||'Color not listed')+'</div><div style="margin-top:12px"><span class="pill">'+esc(d.status||'')+
     '</span></div><div class="kv" style="margin-top:14px"><div><span>Brought in</span>'+esc(new Date(d.towDate).toLocaleString())+
     '</div><div><span>Agency</span>'+esc(d.agency||'—')+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+
-    '</div><div><span>Yard location</span>'+esc(d.yardLocation||'—')+'</div></div></div>'+
+    '</div><div><span>Impound type</span>'+esc(impoundLabel(d.impoundType))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(d.pickupLocation||d.yardLocation||'—')+'</div></div></div>'+
     (photos?'<div class="card"><div class="small muted">PHOTOS</div><div class="photos" style="margin-top:12px">'+photos+'</div></div>':'');
   }catch(e){
-    app.innerHTML='<div class="brand">Tow<b>Tag</b></div><div class="error">'+esc(e.message)+'</div>';
+    app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="error">'+esc(e.message)+'</div>';
   }
 }
 
