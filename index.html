@@ -16,7 +16,7 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
 .input{width:100%;background:#101419;border:1px solid var(--line);border-radius:12px;padding:13px;color:#fff;margin:5px 0 10px;font-size:16px}
 .btn{border:0;border-radius:13px;padding:14px 15px;font-weight:800;background:var(--green);color:#071003;width:100%;margin-top:8px}
-.btn.secondary{background:transparent;border:1px solid #3a4652;color:#dce3e9}.row{display:flex;gap:10px}.row>*{flex:1}
+.btn.secondary{background:transparent;border:1px solid #3a4652;color:#dce3e9}.btn.danger{background:#351416;border:1px solid #7d2d35;color:#ffb8bf}.row{display:flex;gap:10px}.row>*{flex:1}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}.link{color:#8dff3f;background:none;border:0;font-weight:750;padding:8px 0}
 .vehicle{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;color:#fff;margin:10px 0}
 .vehicle h3{margin:0 0 5px}.pill{display:inline-block;padding:6px 9px;border-radius:999px;background:#20320f;color:#baff83;font-size:12px;font-weight:800;text-transform:capitalize}
@@ -179,7 +179,9 @@ function detail(id){
   '<div class="card" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div>'+
   '<input id="photo" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhoto(this.files[0])">'+
   '<div class="row"><button class="btn" onclick="photo.click()">Add Photo</button><button class="btn secondary" onclick="location.href=\''+publicUrl+
-  '\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div></div>';
+  '\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div></div>'+
+  '<div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p>'+
+  '<button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
 }
 
 async function updateVehicleStatus(){
@@ -199,6 +201,35 @@ async function updateVehicleStatus(){
     alert('Status update failed: '+e.message);
   }
 }
+
+async function deleteVehicle(){
+  if(!selected)return;
+  const vehicleName=title(selected);
+  const ok=confirm('Permanently delete '+vehicleName+' from TowTag?\n\nThis removes the vehicle record and its photos. This cannot be undone.');
+  if(!ok)return;
+  try{
+    const photos=await api('/rest/v1/vehicle_photos?select=storage_path&vehicle_id=eq.'+encodeURIComponent(selected.id));
+    for(const p of (photos||[])){
+      if(!p.storage_path)continue;
+      try{
+        await api('/storage/v1/object/vehicle-photos/'+p.storage_path.split('/').map(encodeURIComponent).join('/'),{method:'DELETE'});
+      }catch(err){
+        console.warn('Photo cleanup failed for',p.storage_path,err);
+      }
+    }
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(selected.id),{
+      method:'DELETE',
+      headers:{Prefer:'return=minimal'}
+    });
+    selected=null;
+    await load();
+    home();
+    alert('Vehicle deleted permanently.');
+  }catch(e){
+    alert('Delete failed: '+e.message);
+  }
+}
+
 async function uploadPhoto(file){
   if(!file||!selected)return;
   try{
