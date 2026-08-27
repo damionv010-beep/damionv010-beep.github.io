@@ -127,7 +127,8 @@ const impoundLabel=v=>({
   police_impound:'Police Impound',
   motor_vehicle_accident:'Motor Vehicle Accident',
   preference_motor_vehicle_accident:'Preference Motor Vehicle Accident',
-  private_party_impound:'Private Party Impound'
+  private_party_impound:'Private Party Impound',
+  abandoned_vehicle:'Abandoned Vehicle'
 }[v]||'Not specified');
 const keysLabel=v=>({received:'Keys Received',no_keys:'No Keys',unknown:'Unknown'}[v]||'Not specified');
 const holdLabel=v=>({none:'No Hold',police_hold:'Police Hold',insurance_hold:'Insurance Hold',owner_hold:'Owner Hold',other:'Other Hold'}[v]||'No Hold');
@@ -197,15 +198,45 @@ async function resolveAgency(name){
 function billingHasData(v){
   return !!(v.equipment_type||v.used_dollies||v.recovery_performed||v.winching_performed||v.cleanup_performed||v.hazmat_cleanup||v.extra_labor||v.after_hours||v.scene_wait_minutes||v.billable_miles||v.other_billable_work||v.billing_notes);
 }
+function billingSummaryLines(v){
+  if(!v||v.record_type==='company_owned')return [];
+  const lines=[];
+  if(v.equipment_type)lines.push('Equipment — '+equipmentLabel(v.equipment_type));
+  if(v.used_dollies)lines.push('Dollies');
+  if(v.recovery_performed||v.recovery_minutes!=null)lines.push('Recovery'+(v.recovery_minutes!=null?' — '+v.recovery_minutes+' min':''));
+  if(v.winching_performed)lines.push('Winching');
+  if(v.cleanup_performed)lines.push('Cleanup');
+  if(v.hazmat_cleanup)lines.push('Hazmat / absorbent cleanup');
+  if(v.extra_labor||v.extra_labor_minutes!=null)lines.push('Extra labor'+(v.extra_labor_minutes!=null?' — '+v.extra_labor_minutes+' min':''));
+  if(v.after_hours)lines.push('After hours');
+  if(v.scene_wait_minutes!=null)lines.push('Scene wait — '+v.scene_wait_minutes+' min');
+  if(v.billable_miles!=null)lines.push('Billable miles — '+v.billable_miles+' mi');
+  if(v.other_billable_work)lines.push(v.other_billable_work);
+  return lines;
+}
+function billingSummaryText(v){
+  const lines=billingSummaryLines(v);
+  let text=['TowTag Billing Summary',title(v)];
+  if(v.tow_number)text.push('Tow / case # — '+v.tow_number);
+  if(v.driver_name)text.push('Driver — '+v.driver_name);
+  text=text.concat(lines);
+  if(v.billing_notes)text.push('Billing notes — '+v.billing_notes);
+  return text.join('\n');
+}
+async function copyBillingSummary(){
+  if(!selected)return;
+  const text=billingSummaryText(selected);
+  try{await navigator.clipboard.writeText(text);alert('Billing summary copied.')}
+  catch(e){prompt('Copy billing summary:',text)}
+}
 function billingCard(v){
   if(v.record_type==='company_owned')return '';
-  return '<div class="card"><div class="small muted">EQUIPMENT & BILLING</div><div class="kv" style="margin-top:10px">'+
-    '<div><span>Truck / equipment</span>'+esc(equipmentLabel(v.equipment_type))+'</div><div><span>Dollies</span>'+yesNo(v.used_dollies)+'</div>'+
-    '<div><span>Recovery</span>'+(v.recovery_performed?'Yes'+(v.recovery_minutes!=null?' · '+esc(v.recovery_minutes)+' min':''):'No')+'</div><div><span>Winching</span>'+yesNo(v.winching_performed)+'</div>'+
-    '<div><span>Cleanup</span>'+yesNo(v.cleanup_performed)+'</div><div><span>Hazmat / absorbent</span>'+yesNo(v.hazmat_cleanup)+'</div>'+
-    '<div><span>Extra labor</span>'+(v.extra_labor?'Yes'+(v.extra_labor_minutes!=null?' · '+esc(v.extra_labor_minutes)+' min':''):'No')+'</div><div><span>After hours</span>'+yesNo(v.after_hours)+'</div>'+
-    '<div><span>Scene wait</span>'+(v.scene_wait_minutes!=null?esc(v.scene_wait_minutes)+' min':'—')+'</div><div><span>Billable miles</span>'+(v.billable_miles!=null?esc(v.billable_miles)+' mi':'—')+'</div>'+
-    '<div style="grid-column:1/-1"><span>Other billable work</span>'+esc(v.other_billable_work||'—')+'</div><div style="grid-column:1/-1"><span>Billing notes</span>'+esc(v.billing_notes||'—')+'</div></div></div>';
+  const lines=billingSummaryLines(v);
+  if(!lines.length&&!v.billing_notes)return '';
+  return '<div class="card"><div class="small muted">BILLING SUMMARY</div>'+
+    '<div style="margin-top:10px">'+(lines.length?lines.map(x=>'<div style="padding:8px 0;border-bottom:1px solid var(--line)">'+esc(x)+'</div>').join(''):'<div class="muted">No billable extras recorded.</div>')+
+    (v.billing_notes?'<div style="margin-top:12px"><span class="small muted">BILLING NOTES</span><div style="margin-top:5px">'+esc(v.billing_notes)+'</div></div>':'')+
+    '</div><button class="btn secondary" onclick="copyBillingSummary()">Copy Billing Summary</button></div>';
 }
 
 function home(){
@@ -234,7 +265,7 @@ function render(q){
 }
 
 function addForm(notice=''){
-  const lastState=pref('state','OR'), lastDriver=pref('driver',''), lastAgency=pref('agency',''), lastEquipment=pref('equipment','wheel_lift');
+  const lastState=pref('state','OR'), savedDriver=pref('driver','Damion'), lastDriver=['Damion','Mike'].includes(savedDriver)?savedDriver:'Damion', lastAgency=pref('agency',''), lastEquipment=pref('equipment','wheel_lift');
   app.innerHTML='<button class="link" onclick="home()">‹ Back</button><div class="h1">Quick Intake</div><p class="muted">Get the vehicle into TowTag now. Finish the less-important details later.</p>'+
   (notice?'<div class="notice">'+esc(notice)+'</div>':'')+
   '<div class="card"><div class="small muted">WHAT ARE WE ADDING?</div><input id="recordType" type="hidden" value="tow"><div class="choice-grid"><button class="choice active" onclick="pickChoice(\'recordType\',\'tow\',this)">Tow / Impound</button><button class="choice" onclick="pickChoice(\'recordType\',\'company_owned\',this)">Company Owned</button></div></div>'+
@@ -243,9 +274,9 @@ function addForm(notice=''){
   '<input id="vin" class="input" placeholder="VIN" maxlength="17" autocapitalize="characters" oninput="this.value=this.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,\'\')"><div class="row"><input id="odometer" class="input" inputmode="numeric" placeholder="Odometer"><div></div></div>'+ 
   '<div class="small muted">KEYS</div><input id="keysStatus" type="hidden" value="unknown"><div class="choice-grid" style="grid-template-columns:repeat(3,1fr)"><button class="choice" onclick="pickChoice(\'keysStatus\',\'received\',this)">Keys ✓</button><button class="choice" onclick="pickChoice(\'keysStatus\',\'no_keys\',this)">No Keys</button><button class="choice active" onclick="pickChoice(\'keysStatus\',\'unknown\',this)">Unknown</button></div></div>'+
   '<div id="towIntake">'+
-    '<div class="card"><div class="small muted">TOW / IMPOUND</div><div class="row"><input id="towNumber" class="input" placeholder="Tow / case #" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"><input id="driverName" class="input" placeholder="Driver" value="'+esc(lastDriver)+'"></div>'+
+    '<div class="card"><div class="small muted">TOW / IMPOUND</div><div class="row"><input id="towNumber" class="input" placeholder="Tow / case #" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"><select id="driverName" class="input"><option value="Damion" '+(lastDriver==='Damion'?'selected':'')+'>Damion</option><option value="Mike" '+(lastDriver==='Mike'?'selected':'')+'>Mike</option></select></div>'+
     '<input id="agency" class="input" list="agencyList" placeholder="Agency" value="'+esc(lastAgency)+'"><datalist id="agencyList"></datalist><input id="pickup" class="input" placeholder="Picked up from">'+
-    '<div class="small muted">IMPOUND TYPE</div><input id="impoundType" type="hidden" value=""><div class="choice-grid"><button class="choice" onclick="pickChoice(\'impoundType\',\'police_impound\',this)">Police Impound</button><button class="choice" onclick="pickChoice(\'impoundType\',\'motor_vehicle_accident\',this)">MVA</button><button class="choice" onclick="pickChoice(\'impoundType\',\'preference_motor_vehicle_accident\',this)">Preference MVA</button><button class="choice" onclick="pickChoice(\'impoundType\',\'private_party_impound\',this)">Private Party</button></div>'+ 
+    '<div class="small muted">REASON</div><input id="impoundType" type="hidden" value=""><div class="choice-grid"><button class="choice" onclick="pickChoice(\'impoundType\',\'police_impound\',this)">Police Impound</button><button class="choice" onclick="pickChoice(\'impoundType\',\'motor_vehicle_accident\',this)">MVA</button><button class="choice" onclick="pickChoice(\'impoundType\',\'preference_motor_vehicle_accident\',this)">Preference MVA</button><button class="choice" onclick="pickChoice(\'impoundType\',\'private_party_impound\',this)">Private Party</button><button class="choice" onclick="pickChoice(\'impoundType\',\'abandoned_vehicle\',this)">Abandoned Vehicle</button></div>'+ 
     '<div class="small muted">TRUCK / EQUIPMENT</div><select id="equipmentType" class="input"><option value="wheel_lift" '+(lastEquipment==='wheel_lift'?'selected':'')+'>Wheel Lift</option><option value="wrecker" '+(lastEquipment==='wrecker'?'selected':'')+'>Wrecker</option><option value="medium_duty" '+(lastEquipment==='medium_duty'?'selected':'')+'>Medium Duty</option><option value="flat_bed" '+(lastEquipment==='flat_bed'?'selected':'')+'>Flat Bed</option></select></div>'+ 
     '<details class="card"><summary>Billing / recovery details</summary><div style="margin-top:12px" class="toggle-grid"><label class="toggle"><input id="usedDollies" type="checkbox"> Dollies</label><label class="toggle"><input id="recoveryPerformed" type="checkbox"> Recovery</label><label class="toggle"><input id="winchingPerformed" type="checkbox"> Winching</label><label class="toggle"><input id="cleanupPerformed" type="checkbox"> Cleanup</label><label class="toggle"><input id="hazmatCleanup" type="checkbox"> Hazmat / absorbent</label><label class="toggle"><input id="extraLabor" type="checkbox"> Extra labor</label><label class="toggle"><input id="afterHours" type="checkbox"> After hours</label></div>'+ 
     '<div class="row"><input id="recoveryMinutes" class="input" inputmode="numeric" placeholder="Recovery minutes"><input id="extraLaborMinutes" class="input" inputmode="numeric" placeholder="Extra labor minutes"></div><div class="row"><input id="sceneWaitMinutes" class="input" inputmode="numeric" placeholder="Scene wait minutes"><input id="billableMiles" class="input" inputmode="decimal" placeholder="Billable miles"></div><textarea id="otherBillableWork" class="input" rows="2" placeholder="Other billable work"></textarea><textarea id="billingNotes" class="input" rows="2" placeholder="Billing notes"></textarea></details>'+ 
@@ -264,7 +295,7 @@ async function saveVehicle(mode='open'){
     let agency_id=null, impound_type=null, owned_disposition=null;
     if(record_type==='tow'){
       impound_type=val('impoundType');
-      if(!impound_type){alert('Choose an impound type.');return}
+      if(!impound_type){alert('Choose a reason.');return}
       agency_id=await resolveAgency(val('agency'));
     }else{
       owned_disposition=val('ownedDisposition');
@@ -307,16 +338,16 @@ function detail(id){
   const releaseCard=!owned?(v.release_at?
     '<div class="card"><div class="small muted">RELEASE RECORD</div><div class="kv" style="margin-top:10px"><div><span>Released</span>'+esc(new Date(v.release_at).toLocaleString())+'</div><div><span>Released to</span>'+esc(v.released_to||'—')+'</div><div><span>ID checked</span>'+(v.release_id_checked?'Yes':'No')+'</div><div><span>Authorized by</span>'+esc(v.release_authorized_by||'—')+'</div><div style="grid-column:1/-1"><span>Release notes</span>'+esc(v.release_notes||'—')+'</div></div></div>':
     '<div class="card"><div class="small muted">RELEASE VEHICLE</div><input id="releasedTo" class="input" placeholder="Released to (name)"><input id="releaseAuthorized" class="input" placeholder="Release authorized by"><label class="toggle"><input id="releaseIdChecked" type="checkbox"> ID checked</label><textarea id="releaseNotes" class="input" rows="3" placeholder="Release notes"></textarea><button class="btn" onclick="releaseVehicle()">Release Vehicle</button></div>'):'';
-  const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Impound type</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
+  const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Reason</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
   '<div class="card kv"><div><span>Added</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
   const statusCard=!owned?'<div class="card"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">This is an older record that was previously marked Auction. Auction is no longer available for new records.</div>':'')+'<select id="vehicleStatus" class="input">'+statusOptions(v.status)+'</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>':'';
   app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill">'+esc(badge)+'</span></div>'+towInfo+ownedCard(v)+billingCard(v)+
-  '<button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button>'+statusCard+releaseCard+
+  '<div class="row"><button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button><button class="btn secondary" onclick="printTowSheet()">Print Tow Sheet</button></div>'+statusCard+releaseCard+
   '<div class="card" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div><input id="cameraPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotos(this.files)"><input id="libraryPhoto" type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this.files)">'+
   '<div class="small muted" style="margin-top:14px">QUICK PHOTO CHECKLIST</div><div class="choice-grid photo-choices" style="grid-template-columns:repeat(3,1fr)"><button class="choice" onclick="takeLabeledPhoto(\'Front\')">Front</button><button class="choice" onclick="takeLabeledPhoto(\'Rear\')">Rear</button><button class="choice" onclick="takeLabeledPhoto(\'Driver side\')">Driver Side</button><button class="choice" onclick="takeLabeledPhoto(\'Passenger side\')">Passenger Side</button><button class="choice" onclick="takeLabeledPhoto(\'Interior\')">Interior</button><button class="choice" onclick="takeLabeledPhoto(\'Damage\')">Damage</button></div>'+ 
   '<div class="small muted" style="margin-top:12px">PHOTO LABEL</div><select id="photoCaption" class="input"><option value="Vehicle photo">General Photo</option><option value="Front">Front</option><option value="Rear">Rear</option><option value="Driver side">Driver Side</option><option value="Passenger side">Passenger Side</option><option value="Interior">Interior</option><option value="Damage">Damage</option><option value="VIN">VIN</option><option value="Odometer">Odometer</option><option value="Personal property">Personal Property</option></select><div class="row"><button class="btn" onclick="cameraPhoto.click()">Take Photo</button><button class="btn secondary" onclick="libraryPhoto.click()">Choose From Photos</button></div><div id="staffPhotos" class="photos" style="margin-top:12px"></div><div class="row"><button class="btn secondary" onclick="location.href=\''+publicUrl+'\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div></div>'+ 
-  '<div class="card"><div class="small muted">ACTIVITY HISTORY</div><div id="activity" class="muted" style="margin-top:10px">Loading history…</div></div><div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p><button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
-  loadActivity(v.id); loadStaffPhotos(v.qr_token);
+  '<div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p><button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
+  loadStaffPhotos(v.qr_token);
 }
 
 function editVehicleForm(){
@@ -324,7 +355,7 @@ function editVehicleForm(){
   const v=selected, owned=v.record_type==='company_owned';
   app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Cancel</button><div class="h1">Edit Vehicle</div><div class="card"><div class="small muted">RECORD TYPE</div><select id="editRecordType" class="input" onchange="toggleEditType()"><option value="tow" '+(!owned?'selected':'')+'>Tow / Impound</option><option value="company_owned" '+(owned?'selected':'')+'>Company Owned</option></select></div>'+ 
   '<div class="card"><div class="small muted">VEHICLE INFORMATION</div><div class="row"><input id="editYear" class="input" inputmode="numeric" placeholder="Year" value="'+esc(v.year||'')+'"><input id="editColor" class="input" placeholder="Color" value="'+esc(v.color||'')+'"></div><input id="editMake" class="input" placeholder="Make" value="'+esc(v.make||'')+'"><input id="editModel" class="input" placeholder="Model" value="'+esc(v.model||'')+'"><div class="row"><input id="editPlate" class="input" placeholder="Plate" value="'+esc(v.plate||'')+'" oninput="this.value=this.value.toUpperCase()"><input id="editState" class="input" placeholder="State" maxlength="2" value="'+esc(v.plate_state||'OR')+'" oninput="this.value=this.value.toUpperCase()"></div><input id="editVin" class="input" placeholder="VIN" maxlength="17" value="'+esc(v.vin||'')+'" oninput="this.value=this.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,\'\')"><div class="row"><input id="editOdometer" class="input" inputmode="numeric" placeholder="Odometer" value="'+esc(v.odometer??'')+'"><select id="editKeys" class="input"><option value="unknown" '+(!v.keys_status||v.keys_status==='unknown'?'selected':'')+'>Keys Unknown</option><option value="received" '+(v.keys_status==='received'?'selected':'')+'>Keys Received</option><option value="no_keys" '+(v.keys_status==='no_keys'?'selected':'')+'>No Keys</option></select></div></div>'+ 
-  '<div id="editTowSection"><div class="card"><div class="small muted">TOW DETAILS</div><div class="small muted">TOW DATE / TIME</div><input id="editTowDate" class="input" type="datetime-local" value="'+esc(localDateTimeValue(v.tow_date))+'"><div class="row"><input id="editTowNumber" class="input" placeholder="Tow / case #" value="'+esc(v.tow_number||'')+'"><input id="editDriver" class="input" placeholder="Driver" value="'+esc(v.driver_name||'')+'"></div><input id="editAgency" class="input" list="editAgencyList" placeholder="Agency" value=""><datalist id="editAgencyList"></datalist><select id="editImpoundType" class="input"><option value="" '+(!v.impound_type?'selected':'')+'>Impound type not specified</option><option value="police_impound" '+(v.impound_type==='police_impound'?'selected':'')+'>Police Impound</option><option value="motor_vehicle_accident" '+(v.impound_type==='motor_vehicle_accident'?'selected':'')+'>Motor Vehicle Accident</option><option value="preference_motor_vehicle_accident" '+(v.impound_type==='preference_motor_vehicle_accident'?'selected':'')+'>Preference Motor Vehicle Accident</option><option value="private_party_impound" '+(v.impound_type==='private_party_impound'?'selected':'')+'>Private Party Impound</option></select><input id="editPickup" class="input" value="'+esc(v.yard_location||'')+'" placeholder="Picked up from"><select id="editHoldType" class="input"><option value="none" '+(!v.hold_type||v.hold_type==='none'?'selected':'')+'>No Hold</option><option value="police_hold" '+(v.hold_type==='police_hold'?'selected':'')+'>Police Hold</option><option value="insurance_hold" '+(v.hold_type==='insurance_hold'?'selected':'')+'>Insurance Hold</option><option value="owner_hold" '+(v.hold_type==='owner_hold'?'selected':'')+'>Owner Hold</option><option value="other" '+(v.hold_type==='other'?'selected':'')+'>Other Hold</option></select><textarea id="editHoldNotes" class="input" rows="2" placeholder="Hold notes">'+esc(v.hold_notes||'')+'</textarea></div>'+ 
+  '<div id="editTowSection"><div class="card"><div class="small muted">TOW DETAILS</div><div class="small muted">TOW DATE / TIME</div><input id="editTowDate" class="input" type="datetime-local" value="'+esc(localDateTimeValue(v.tow_date))+'"><div class="row"><input id="editTowNumber" class="input" placeholder="Tow / case #" value="'+esc(v.tow_number||'')+'"><select id="editDriver" class="input"><option value="Damion" '+(v.driver_name==='Damion'?'selected':'')+'>Damion</option><option value="Mike" '+(v.driver_name==='Mike'?'selected':'')+'>Mike</option></select></div><input id="editAgency" class="input" list="editAgencyList" placeholder="Agency" value=""><datalist id="editAgencyList"></datalist><select id="editImpoundType" class="input"><option value="" '+(!v.impound_type?'selected':'')+'>Reason not specified</option><option value="police_impound" '+(v.impound_type==='police_impound'?'selected':'')+'>Police Impound</option><option value="motor_vehicle_accident" '+(v.impound_type==='motor_vehicle_accident'?'selected':'')+'>Motor Vehicle Accident</option><option value="preference_motor_vehicle_accident" '+(v.impound_type==='preference_motor_vehicle_accident'?'selected':'')+'>Preference Motor Vehicle Accident</option><option value="private_party_impound" '+(v.impound_type==='private_party_impound'?'selected':'')+'>Private Party Impound</option><option value="abandoned_vehicle" '+(v.impound_type==='abandoned_vehicle'?'selected':'')+'>Abandoned Vehicle</option></select><input id="editPickup" class="input" value="'+esc(v.yard_location||'')+'" placeholder="Picked up from"><select id="editHoldType" class="input"><option value="none" '+(!v.hold_type||v.hold_type==='none'?'selected':'')+'>No Hold</option><option value="police_hold" '+(v.hold_type==='police_hold'?'selected':'')+'>Police Hold</option><option value="insurance_hold" '+(v.hold_type==='insurance_hold'?'selected':'')+'>Insurance Hold</option><option value="owner_hold" '+(v.hold_type==='owner_hold'?'selected':'')+'>Owner Hold</option><option value="other" '+(v.hold_type==='other'?'selected':'')+'>Other Hold</option></select><textarea id="editHoldNotes" class="input" rows="2" placeholder="Hold notes">'+esc(v.hold_notes||'')+'</textarea></div>'+ 
   '<div class="card"><div class="small muted">EQUIPMENT & BILLING</div><select id="editEquipmentType" class="input"><option value="">Equipment not specified</option><option value="wheel_lift" '+(v.equipment_type==='wheel_lift'?'selected':'')+'>Wheel Lift</option><option value="wrecker" '+(v.equipment_type==='wrecker'?'selected':'')+'>Wrecker</option><option value="medium_duty" '+(v.equipment_type==='medium_duty'?'selected':'')+'>Medium Duty</option><option value="flat_bed" '+(v.equipment_type==='flat_bed'?'selected':'')+'>Flat Bed</option></select><div class="toggle-grid"><label class="toggle"><input id="editUsedDollies" type="checkbox" '+(v.used_dollies?'checked':'')+'> Dollies</label><label class="toggle"><input id="editRecoveryPerformed" type="checkbox" '+(v.recovery_performed?'checked':'')+'> Recovery</label><label class="toggle"><input id="editWinchingPerformed" type="checkbox" '+(v.winching_performed?'checked':'')+'> Winching</label><label class="toggle"><input id="editCleanupPerformed" type="checkbox" '+(v.cleanup_performed?'checked':'')+'> Cleanup</label><label class="toggle"><input id="editHazmatCleanup" type="checkbox" '+(v.hazmat_cleanup?'checked':'')+'> Hazmat / absorbent</label><label class="toggle"><input id="editExtraLabor" type="checkbox" '+(v.extra_labor?'checked':'')+'> Extra labor</label><label class="toggle"><input id="editAfterHours" type="checkbox" '+(v.after_hours?'checked':'')+'> After hours</label></div><div class="row"><input id="editRecoveryMinutes" class="input" inputmode="numeric" placeholder="Recovery minutes" value="'+esc(v.recovery_minutes??'')+'"><input id="editExtraLaborMinutes" class="input" inputmode="numeric" placeholder="Extra labor minutes" value="'+esc(v.extra_labor_minutes??'')+'"></div><div class="row"><input id="editSceneWaitMinutes" class="input" inputmode="numeric" placeholder="Scene wait minutes" value="'+esc(v.scene_wait_minutes??'')+'"><input id="editBillableMiles" class="input" inputmode="decimal" placeholder="Billable miles" value="'+esc(v.billable_miles??'')+'"></div><textarea id="editOtherBillableWork" class="input" rows="2" placeholder="Other billable work">'+esc(v.other_billable_work||'')+'</textarea><textarea id="editBillingNotes" class="input" rows="2" placeholder="Billing notes">'+esc(v.billing_notes||'')+'</textarea></div></div>'+ 
   '<div id="editOwnedSection"><div class="card"><div class="small muted">COMPANY-OWNED VEHICLE</div><select id="editOwnedDisposition" class="input"><option value="for_sale" '+(v.owned_disposition==='for_sale'?'selected':'')+'>For Sale</option><option value="scrap" '+(v.owned_disposition==='scrap'?'selected':'')+'>Going to Scrap</option><option value="sold" '+(v.owned_disposition==='sold'?'selected':'')+'>Sold</option><option value="scrapped" '+(v.owned_disposition==='scrapped'?'selected':'')+'>Scrapped</option></select><div class="row"><input id="editAskingPrice" class="input" inputmode="decimal" placeholder="Asking price" value="'+esc(v.asking_price??'')+'"><input id="editDispositionAmount" class="input" inputmode="decimal" placeholder="Sale / scrap amount" value="'+esc(v.disposition_amount??'')+'"></div><textarea id="editOwnedNotes" class="input" rows="3" placeholder="Owned vehicle notes">'+esc(v.owned_notes||'')+'</textarea></div></div>'+ 
   '<div class="card"><div class="small muted">CONDITION & PROPERTY</div><textarea id="editCondition" class="input" rows="3" placeholder="Vehicle condition / existing damage">'+esc(v.condition_notes||'')+'</textarea><textarea id="editProperty" class="input" rows="3" placeholder="Personal property">'+esc(v.property_notes||'')+'</textarea><textarea id="editNotes" class="input" rows="4" placeholder="Staff notes">'+esc(v.notes||'')+'</textarea><div id="editStatusWrap"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">Legacy Auction is preserved for this old record, but Auction is no longer offered for new records.</div>':'')+'<select id="editStatus" class="input">'+statusOptions(v.status)+'</select></div></div>'+ 
@@ -385,6 +416,55 @@ async function releaseVehicle(){
   }catch(e){alert('Release failed: '+e.message)}
 }
 
+
+function printEscape(v){return esc(v);}
+async function printTowSheet(){
+  if(!selected)return;
+  const v=selected, owned=v.record_type==='company_owned';
+  const w=window.open('','_blank');
+  if(!w){alert('Allow pop-ups for TowTag to print the tow sheet.');return}
+  w.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>TowTag Tow Sheet</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px">Preparing TowTag sheet…</body></html>');
+  try{
+    let photos=[];
+    try{
+      const r=await fetch(BASE+'/functions/v1/towtag-public-vehicle?token='+encodeURIComponent(v.qr_token),{headers:{apikey:KEY}});
+      const d=await r.json(); if(r.ok)photos=d.photos||[];
+    }catch(e){console.warn('Print photos unavailable',e)}
+    const vehicleName=title(v);
+    const fields=owned?[
+      ['Record Type','Company Owned'],['Disposition',ownedLabel(v.owned_disposition)],['Added',new Date(v.tow_date).toLocaleString()],
+      ['Plate',(v.plate||'—')+' '+(v.plate_state||'')],['VIN',v.vin||'—'],['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],
+      ['Asking Price',money(v.asking_price)],['Sale / Scrap Amount',money(v.disposition_amount)]
+    ]:[
+      ['Tow Date / Time',new Date(v.tow_date).toLocaleString()],['Tow / Case #',v.tow_number||'—'],['Driver',v.driver_name||'—'],
+      ['Reason',impoundLabel(v.impound_type)],['Plate',(v.plate||'—')+' '+(v.plate_state||'')],['VIN',v.vin||'—'],
+      ['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],['Picked Up From',v.yard_location||'—'],
+      ['Hold',holdLabel(v.hold_type)],['Status',v.status||'—']
+    ];
+    const extra=owned?[
+      ['Owned Vehicle Notes',v.owned_notes||'—'],['Condition / Damage',v.condition_notes||'—'],['Staff Notes',v.notes||'—']
+    ]:[
+      ['Hold Notes',v.hold_notes||'—'],['Condition / Damage',v.condition_notes||'—'],['Personal Property',v.property_notes||'—'],['Staff Notes',v.notes||'—']
+    ];
+    const billing=owned?[]:billingSummaryLines(v);
+    const release=(!owned&&v.release_at)?[
+      ['Released',new Date(v.release_at).toLocaleString()],['Released To',v.released_to||'—'],['ID Checked',v.release_id_checked?'Yes':'No'],
+      ['Authorized By',v.release_authorized_by||'—'],['Release Notes',v.release_notes||'—']
+    ]:[];
+    const photoHtml=photos.length?'<h2>Photos</h2><div class="photos">'+photos.map(p=>'<div><img src="'+printEscape(p.url)+'"><div class="cap">'+printEscape(p.caption||'Vehicle photo')+'</div></div>').join('')+'</div>':'';
+    const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+printEscape(vehicleName)+' — TowTag</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:24px}h1{margin:0}h2{font-size:16px;margin:24px 0 8px;border-bottom:2px solid #111;padding-bottom:5px}.sub{color:#555;margin-top:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}.item{padding:6px 0;border-bottom:1px solid #ddd}.label{font-size:10px;color:#666;text-transform:uppercase;display:block}.billing div{padding:5px 0}.photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}.photos img{width:100%;max-height:240px;object-fit:contain;border:1px solid #ccc}.cap{font-size:11px;color:#555}.foot{margin-top:28px;font-size:10px;color:#666}@media print{button{display:none}body{margin:12mm}}</style></head><body>'+
+      '<h1>Mike’s Cascade Towing Yard</h1><div class="sub">TowTag Vehicle Sheet · '+printEscape(vehicleName)+'</div>'+
+      '<h2>Vehicle / Record</h2><div class="grid">'+fields.map(x=>'<div class="item"><span class="label">'+printEscape(x[0])+'</span>'+printEscape(x[1])+'</div>').join('')+'</div>'+
+      (extra.length?'<h2>Notes</h2><div class="grid">'+extra.map(x=>'<div class="item"><span class="label">'+printEscape(x[0])+'</span>'+printEscape(x[1])+'</div>').join('')+'</div>':'')+
+      (billing.length||v.billing_notes?'<h2>Billing Summary</h2><div class="billing">'+billing.map(x=>'<div>• '+printEscape(x)+'</div>').join('')+(v.billing_notes?'<div><strong>Billing notes:</strong> '+printEscape(v.billing_notes)+'</div>':'')+'</div>':'')+
+      (release.length?'<h2>Release Record</h2><div class="grid">'+release.map(x=>'<div class="item"><span class="label">'+printEscape(x[0])+'</span>'+printEscape(x[1])+'</div>').join('')+'</div>':'')+
+      photoHtml+'<div class="foot">TowTag · '+printEscape(v.qr_token)+'</div><p><button onclick="window.print()">Print / Save PDF</button></p></body></html>';
+    w.document.open();w.document.write(html);w.document.close();
+  }catch(e){
+    w.document.body.innerHTML='<p>Could not prepare tow sheet: '+printEscape(e.message)+'</p>';
+  }
+}
+
 async function loadActivity(id){
   const target=el('activity'); if(!target)return;
   try{
@@ -432,7 +512,7 @@ async function uploadPhotos(fileList){
       const caption=el('photoCaption')?.value||'Vehicle photo';
       await api('/rest/v1/vehicle_photos',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({vehicle_id:selected.id,storage_path:path,caption,created_by:user.id})});
     }
-    await loadStaffPhotos(selected.qr_token); await loadActivity(selected.id); alert(files.length===1?'Photo added to TowTag.':files.length+' photos added to TowTag.');
+    await loadStaffPhotos(selected.qr_token); alert(files.length===1?'Photo added to TowTag.':files.length+' photos added to TowTag.');
   }catch(e){alert('Photo upload failed: '+e.message)}
 }
 async function shareTag(){
@@ -452,7 +532,7 @@ async function publicView(token){
     const owned=d.recordType==='company_owned';
     const badge=owned?ownedLabel(d.ownedDisposition):(d.status||'');
     const info=owned?'<div class="kv" style="margin-top:14px"><div><span>Record type</span>Company Owned</div><div><span>Disposition</span>'+esc(ownedLabel(d.ownedDisposition))+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Added</span>'+esc(new Date(d.towDate).toLocaleString())+'</div></div>':
-      '<div class="kv" style="margin-top:14px"><div><span>Brought in</span>'+esc(new Date(d.towDate).toLocaleString())+'</div><div><span>Agency</span>'+esc(d.agency||'—')+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Impound type</span>'+esc(impoundLabel(d.impoundType))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(d.pickupLocation||d.yardLocation||'—')+'</div></div>';
+      '<div class="kv" style="margin-top:14px"><div><span>Brought in</span>'+esc(new Date(d.towDate).toLocaleString())+'</div><div><span>Agency</span>'+esc(d.agency||'—')+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Reason</span>'+esc(impoundLabel(d.impoundType))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(d.pickupLocation||d.yardLocation||'—')+'</div></div>';
     app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card"><div class="small muted">VEHICLE RECORD</div><div class="h1">'+esc(veh)+
     '</div><div class="muted">'+esc(d.vehicle?.color||'Color not listed')+'</div><div style="margin-top:12px"><span class="pill">'+esc(badge)+'</span></div>'+info+'</div>'+ (photos?'<div class="card"><div class="small muted">PHOTOS</div><div class="photos" style="margin-top:12px">'+photos+'</div></div>':'');
   }catch(e){
