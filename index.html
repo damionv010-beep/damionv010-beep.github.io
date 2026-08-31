@@ -35,6 +35,17 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 .invoice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:560px){.invoice-actions{grid-template-columns:1fr}.invoice-checks{grid-template-columns:1fr 1fr}}
 
+
+/* TowTag brand lockup — intentionally split into two distinct visual voices. */
+.brand-lockup{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1;margin-bottom:3px}
+.brand-mikes{font-family:Georgia,"Times New Roman",serif;font-size:29px;font-weight:700;font-style:italic;color:#f5f7fa;letter-spacing:-.5px;text-shadow:0 1px 0 #000}
+.brand-yard{font-family:"Arial Narrow","Helvetica Neue Condensed","Roboto Condensed",Arial,sans-serif;font-size:17px;font-weight:900;color:var(--green);letter-spacing:3.1px;text-transform:uppercase;margin-top:5px}
+.brand-powered{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:10px;font-weight:650;color:var(--muted);letter-spacing:.45px;margin-top:6px}
+.search-all-note{padding:8px 10px;border:1px solid #30431e;background:#151c12;color:#cfffaa;border-radius:11px;font-size:12px;margin:-2px 0 10px}
+.storage-clock{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#101419;border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+.storage-clock strong{font-size:18px;color:#fff}.storage-clock span{font-size:11px;color:var(--muted);display:block;margin-top:2px}
+.billing-ok{color:#baff83;font-weight:750}
+
 </style>
 </head>
 <body><main class="wrap"><div id="app"></div></main>
@@ -76,7 +87,7 @@ async function api(path,opt={}){
   return d;
 }
 function authBrand(){
-  return '<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><p class="muted">Vehicle records, billing, invoices + QR tags</p>';
+  return '<div class="brand-lockup"><div class="brand-mikes">Mike’s Cascade</div><div class="brand-yard">Towing Yard</div><div class="brand-powered">Powered by TowTag</div></div><p class="muted">Vehicle records, billing, invoices + QR tags</p>';
 }
 function togglePassword(id='pw',buttonId='showPw'){
   const el=document.getElementById(id),btn=document.getElementById(buttonId);
@@ -221,6 +232,61 @@ const recordLabel=v=>v==='company_owned'?'Company Owned':'Tow / Impound';
 const ownedLabel=v=>({for_sale:'For Sale',scrap:'Going to Scrap',sold:'Sold',scrapped:'Scrapped'}[v]||'Not specified');
 const equipmentLabel=v=>({wheel_lift:'Wheel Lift',wrecker:'Wrecker',medium_duty:'Medium Duty',flat_bed:'Flat Bed'}[v]||'Not specified');
 const yesNo=v=>v?'Yes':'No';
+function storageDayCount(v,endOverride=null){
+  if(!v||!v.tow_date||v.record_type==='company_owned')return 0;
+  const start=new Date(v.tow_date);
+  const rawEnd=endOverride||v.release_at||v.archived_at||new Date();
+  const end=rawEnd instanceof Date?rawEnd:new Date(rawEnd);
+  if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return 0;
+  const dayStart=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
+  const diff=Math.floor((dayStart(end)-dayStart(start))/86400000);
+  return Math.max(1,diff+1);
+}
+function storageDayText(v){
+  const d=storageDayCount(v);
+  return d+' calendar day'+(d===1?'':'s');
+}
+function vehicleSearchText(v){
+  if(!v)return '';
+  const inv=v.invoice_data||{};
+  return JSON.stringify([
+    v.year,v.make,v.model,v.color,v.plate,v.plate_state,v.vin,v.yard_location,v.impound_type,v.tow_number,v.driver_name,
+    v.record_type,v.owned_disposition,v.equipment_type,v.other_billable_work,v.billing_notes,v.invoice_number,
+    v.released_to,v.release_authorized_by,v.release_notes,v.condition_notes,v.property_notes,v.notes,v.owned_notes,
+    inv.customer_name,inv.customer_phone,inv.registered_owner,inv.requested_by,inv.po_case,inv.officer_name,inv.driver_license
+  ]).toLowerCase();
+}
+function billingReleaseWarnings(v){
+  const warnings=[];
+  if(!v||v.record_type==='company_owned')return warnings;
+  if(!v.equipment_type)warnings.push('Equipment type has not been selected.');
+  if(v.recovery_performed&&!(Number(v.recovery_minutes)>0))warnings.push('Recovery is marked, but recovery time is blank.');
+  if(v.extra_labor&&!(Number(v.extra_labor_minutes)>0))warnings.push('Extra labor is marked, but labor time is blank.');
+  if(v.hazmat_cleanup&&!v.cleanup_performed)warnings.push('Hazmat is marked; verify cleanup is also included on billing.');
+  if(!v.invoice_number&&!v.invoice_data)warnings.push('No invoice has been saved to this vehicle yet.');
+  const days=storageDayCount(v);
+  const inv=v.invoice_data||{};
+  if(days>1&&!inv.storage_charge)warnings.push(days+' calendar storage days are showing, but no storage charge is saved on the invoice.');
+  return warnings;
+}
+function confirmBillingBeforeRelease(v){
+  const warnings=billingReleaseWarnings(v);
+  const lines=[
+    'BILLING CHECK',
+    '',
+    'Storage: '+storageDayText(v),
+    'Equipment: '+equipmentLabel(v.equipment_type),
+    'Invoice: '+(v.invoice_number?'#'+v.invoice_number:(v.invoice_data?'Saved':'Not saved'))
+  ];
+  if(warnings.length){
+    lines.push('','Possible missing billing:');
+    warnings.forEach(x=>lines.push('• '+x));
+    lines.push('','Release vehicle anyway?');
+  }else{
+    lines.push('','Billing check looks good. Release vehicle?');
+  }
+  return confirm(lines.join('\n'));
+}
 
 function statusOptions(current){
   return (current==='auction'?'<option value="auction" selected>Legacy Auction</option>':'')+
@@ -296,6 +362,7 @@ function billingSummaryText(v){
   let text=['TowTag Billing Summary',title(v)];
   if(v.tow_number)text.push('Tow / case # — '+v.tow_number);
   if(v.driver_name)text.push('Driver — '+v.driver_name);
+  text.push('Storage — '+storageDayText(v));
   text=text.concat(lines);
   if(v.billing_notes)text.push('Billing notes — '+v.billing_notes);
   return text.join('\n');
@@ -308,10 +375,10 @@ async function copyBillingSummary(){
 }
 function billingCard(v){
   if(v.record_type==='company_owned')return '';
-  const lines=billingSummaryLines(v);
-  if(!lines.length&&!v.billing_notes)return '';
-  return '<div class="card"><div class="small muted">BILLING SUMMARY</div>'+
-    '<div style="margin-top:10px">'+(lines.length?lines.map(x=>'<div style="padding:8px 0;border-bottom:1px solid var(--line)">'+esc(x)+'</div>').join(''):'<div class="muted">No billable extras recorded.</div>')+
+  const lines=billingSummaryLines(v), days=storageDayCount(v);
+  return '<div class="card"><div class="small muted">BILLING SUMMARY</div>'+ 
+    '<div class="storage-clock"><div><strong>'+days+'</strong><span>calendar storage day'+(days===1?'':'s')+'</span></div><div class="small muted">Auto-calculated from tow date</div></div>'+ 
+    '<div style="margin-top:10px">'+(lines.length?lines.map(x=>'<div style="padding:8px 0;border-bottom:1px solid var(--line)">'+esc(x)+'</div>').join(''):'<div class="muted">No tow extras recorded yet.</div>')+
     (v.billing_notes?'<div style="margin-top:12px"><span class="small muted">BILLING NOTES</span><div style="margin-top:5px">'+esc(v.billing_notes)+'</div></div>':'')+
     '</div><button class="btn secondary" onclick="copyBillingSummary()">Copy Billing Summary</button></div>';
 }
@@ -323,27 +390,32 @@ function home(){
   const towCount=active.filter(v=>(v.record_type||'tow')!=='company_owned').length;
   const saleCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale').length;
   const scrapCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap').length;
-  app.innerHTML='<div class="top"><div><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="muted small">'+active.length+' active · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap · '+archivedCount+' archived</div></div><button class="link" onclick="logout()">Sign Out</button></div>'+
+  app.innerHTML='<div class="top"><div><div class="brand-lockup"><div class="brand-mikes">Mike’s Cascade</div><div class="brand-yard">Towing Yard</div><div class="brand-powered">Powered by TowTag</div></div><div class="muted small">'+active.length+' active · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap · '+archivedCount+' archived</div></div><button class="link" onclick="logout()">Sign Out</button></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
   '<div class="choice-grid filters" style="grid-template-columns:repeat(5,1fr);margin-top:12px"><button class="choice active" data-filter onclick="setHomeFilter(\'all\',this)">Active</button><button class="choice" data-filter onclick="setHomeFilter(\'tow\',this)">Tows</button><button class="choice" data-filter onclick="setHomeFilter(\'sale\',this)">For Sale</button><button class="choice" data-filter onclick="setHomeFilter(\'scrap\',this)">Scrap</button><button class="choice" data-filter onclick="setHomeFilter(\'archive\',this)">Archive</button></div>'+
-  '<input id="search" class="input" placeholder="Search plate, VIN, tow #, driver..." oninput="render(this.value)"><div id="list"></div>';
+  '<input id="search" class="input" type="search" autocomplete="off" placeholder="Search everything — plate, VIN, case #, invoice, owner…" oninput="render(this.value)"><div id="list"></div>';
   homeFilter='all'; render('');
 }
 function render(q){
-  q=(q||'').toLowerCase();
-  let rows=vehicles.filter(v=>JSON.stringify([v.year,v.make,v.model,v.color,v.plate,v.vin,v.yard_location,v.impound_type,v.tow_number,v.driver_name,v.record_type,v.owned_disposition,v.equipment_type,v.other_billable_work]).toLowerCase().includes(q));
-  if(homeFilter==='archive')rows=rows.filter(v=>!!v.archived_at);
-  else rows=rows.filter(v=>!v.archived_at);
-  if(homeFilter==='tow')rows=rows.filter(v=>(v.record_type||'tow')!=='company_owned');
-  if(homeFilter==='sale')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale');
-  if(homeFilter==='scrap')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap');
-  el('list').innerHTML=rows.map(v=>{
+  q=(q||'').trim().toLowerCase();
+  const globalSearch=!!q;
+  let rows=vehicles.filter(v=>!q||vehicleSearchText(v).includes(q));
+  if(!globalSearch){
+    if(homeFilter==='archive')rows=rows.filter(v=>!!v.archived_at);
+    else rows=rows.filter(v=>!v.archived_at);
+    if(homeFilter==='tow')rows=rows.filter(v=>(v.record_type||'tow')!=='company_owned');
+    if(homeFilter==='sale')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale');
+    if(homeFilter==='scrap')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap');
+  }
+  const note=globalSearch?'<div class="search-all-note">Searching all active + archived records</div>':'';
+  el('list').innerHTML=note+(rows.map(v=>{
     const owned=v.record_type==='company_owned';
     const badge=v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):v.status);
     const extra=owned&&v.owned_disposition==='for_sale'&&v.asking_price!=null?' · '+money(v.asking_price):'';
     const archived=v.archived_at?' · Archived '+new Date(v.archived_at).toLocaleDateString():'';
-    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+extra+'</div><div class="small muted" style="margin-top:7px">'+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill">'+esc(badge)+'</span>'+esc(archived)+'</div></button>';
-  }).join('')||'<div class="card muted">No matching vehicles.</div>';
+    const storage=!owned?' · '+storageDayText(v):'';
+    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+extra+'</div><div class="small muted" style="margin-top:7px">'+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill">'+esc(badge)+'</span>'+esc(storage)+esc(archived)+'</div></button>';
+  }).join('')||'<div class="card muted">No matching vehicles.</div>');
 }
 
 function addForm(notice=''){
@@ -420,7 +492,7 @@ function detail(id){
   const releaseCard=!owned?(v.release_at?
     '<div class="card"><div class="small muted">RELEASE RECORD</div><div class="kv" style="margin-top:10px"><div><span>Released</span>'+esc(new Date(v.release_at).toLocaleString())+'</div><div><span>Released to</span>'+esc(v.released_to||'—')+'</div><div><span>ID checked</span>'+(v.release_id_checked?'Yes':'No')+'</div><div><span>Authorized by</span>'+esc(v.release_authorized_by||'—')+'</div><div style="grid-column:1/-1"><span>Release notes</span>'+esc(v.release_notes||'—')+'</div></div></div>':
     '<div class="card"><div class="small muted">RELEASE VEHICLE</div><input id="releasedTo" class="input" placeholder="Released to (name)"><input id="releaseAuthorized" class="input" placeholder="Release authorized by"><label class="toggle"><input id="releaseIdChecked" type="checkbox"> ID checked</label><textarea id="releaseNotes" class="input" rows="3" placeholder="Release notes"></textarea><button class="btn" onclick="releaseVehicle()">Release Vehicle</button></div>'):'';
-  const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Reason</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
+  const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Storage days</span>'+esc(storageDayText(v))+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Reason</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
   '<div class="card kv"><div><span>Added</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
   const statusCard=!owned?'<div class="card"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">This is an older record that was previously marked Auction. Auction is no longer available for new records.</div>':'')+'<select id="vehicleStatus" class="input">'+statusOptions(v.status)+'</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>':'';
   const archiveCard=v.archived_at?'<div class="card"><div class="small muted">ARCHIVED</div><div class="notice">This vehicle left the active yard list on '+esc(new Date(v.archived_at).toLocaleString())+'. All photos, invoices, billing and TowTag data are still saved.</div><button class="btn secondary" onclick="restoreVehicle()">Restore to Active Vehicles</button></div>':'<div class="card"><div class="small muted">ARCHIVE</div><p class="muted">Use this when the vehicle has left the yard. Nothing is deleted.</p><button class="btn secondary" onclick="archiveVehicle()">Archive Vehicle</button></div>';
@@ -492,6 +564,7 @@ async function completeOwnedDisposition(kind){
 async function releaseVehicle(){
   if(!selected)return;
   const name=val('releasedTo'); if(!name){alert('Enter who the vehicle is being released to.');return}
+  if(!confirmBillingBeforeRelease(selected))return;
   const id=selected.id;
   try{
     const now=new Date().toISOString();
@@ -529,7 +602,7 @@ function invoiceMergeDefaults(v,agencyName=''){
     requested_by:agencyName||'',po_case:v.tow_number||'',officer_name:'',customer_name:'',customer_phone:'',address:'',city:'',state:'OR',zip:'',
     year:v.year||'',make_model:[v.make,v.model].filter(Boolean).join(' '),color:v.color||'',odometer:v.odometer??'',driver:v.driver_name||'Damion',plate:v.plate||'',plate_state:v.plate_state||'OR',vin:v.vin||'',registered_owner:'',
     location_vehicle:v.yard_location||'',towed_to:"Mike’s Cascade Towing",insurance_company:'',appraiser_name:'',insurance_date:'',insurance_phone:'',released_by:v.release_authorized_by||'',released_date:released?invoiceDateValue(released):'',released_phone:'',
-    personals_taken_by:'',personals_date:'',personals_phone:'',storage_from:invoiceDateValue(tow),storage_to:released?invoiceDateValue(released):'',storage_days:'',storage_rate:'',damage_notes:v.condition_notes||'',keys_left:v.keys_status==='received'?'yes':v.keys_status==='no_keys'?'no':'',radio:'',
+    personals_taken_by:'',personals_date:'',personals_phone:'',storage_from:invoiceDateValue(tow),storage_to:released?invoiceDateValue(released):invoiceDateValue(new Date()),storage_days:String(storageDayCount(v,released||new Date())),storage_rate:'',damage_notes:v.condition_notes||'',keys_left:v.keys_status==='received'?'yes':v.keys_status==='no_keys'?'no':'',radio:'',
     reasons,tow_types,ordered_by:stored.ordered_by||[],special_equipment,other_services,
     mileage_finish:'',mileage_start:'',mileage_total:v.billable_miles??'',labor_finish:'',labor_start:'',labor_total:laborMins?laborMins+' min':'',extra_finish:'',extra_start:'',extra_total:v.extra_labor_minutes?String(v.extra_labor_minutes)+' min':'',
     towing_charge:'',mileage_charge:'',labor_charge:'',extra_person_charge:'',special_equipment_charge:'',storage_charge:'',subtotal:'',tax:'',total:'',payment_method:'',driver_license:'',license_exp:'',driver_number:'',truck_number:'',
@@ -641,7 +714,7 @@ async function printTowSheet(){
     ]:[
       ['Tow Date / Time',new Date(v.tow_date).toLocaleString()],['Tow / Case #',v.tow_number||'—'],['Driver',v.driver_name||'—'],
       ['Reason',impoundLabel(v.impound_type)],['Plate',(v.plate||'—')+' '+(v.plate_state||'')],['VIN',v.vin||'—'],
-      ['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],['Picked Up From',v.yard_location||'—'],
+      ['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],['Storage Days',storageDayText(v)],['Picked Up From',v.yard_location||'—'],
       ['Hold',holdLabel(v.hold_type)],['Status',v.status||'—']
     ];
     const extra=owned?[
@@ -686,6 +759,7 @@ async function updateVehicleStatus(){
   if(!selected)return;
   try{
     const id=selected.id,newStatus=val('vehicleStatus');
+    if(newStatus==='released'&&!confirmBillingBeforeRelease(selected))return;
     const body={status:newStatus};
     if(newStatus==='released'&&!selected.archived_at){body.archived_at=new Date().toISOString();body.archived_by=user.id;}
     await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});
@@ -746,7 +820,7 @@ function logout(){saveSession(null);loginScreen()}
 
 
 async function publicView(token){
-  app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card muted">Loading vehicle record…</div>';
+  app.innerHTML='<div class="brand-lockup"><div class="brand-mikes">Mike’s Cascade</div><div class="brand-yard">Towing Yard</div><div class="brand-powered">Powered by TowTag</div></div><div class="card muted">Loading vehicle record…</div>';
   try{
     const r=await fetch(BASE+'/functions/v1/towtag-public-vehicle?token='+encodeURIComponent(token),{headers:{apikey:KEY}});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||'TowTag not found');
@@ -756,10 +830,10 @@ async function publicView(token){
     const badge=owned?ownedLabel(d.ownedDisposition):(d.status||'');
     const info=owned?'<div class="kv" style="margin-top:14px"><div><span>Record type</span>Company Owned</div><div><span>Disposition</span>'+esc(ownedLabel(d.ownedDisposition))+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Added</span>'+esc(new Date(d.towDate).toLocaleString())+'</div></div>':
       '<div class="kv" style="margin-top:14px"><div><span>Brought in</span>'+esc(new Date(d.towDate).toLocaleString())+'</div><div><span>Agency</span>'+esc(d.agency||'—')+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Reason</span>'+esc(impoundLabel(d.impoundType))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(d.pickupLocation||d.yardLocation||'—')+'</div></div>';
-    app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card"><div class="small muted">VEHICLE RECORD</div><div class="h1">'+esc(veh)+
+    app.innerHTML='<div class="brand-lockup"><div class="brand-mikes">Mike’s Cascade</div><div class="brand-yard">Towing Yard</div><div class="brand-powered">Powered by TowTag</div></div><div class="card"><div class="small muted">VEHICLE RECORD</div><div class="h1">'+esc(veh)+
     '</div><div class="muted">'+esc(d.vehicle?.color||'Color not listed')+'</div><div style="margin-top:12px"><span class="pill">'+esc(badge)+'</span></div>'+info+'</div>'+ (photos?'<div class="card"><div class="small muted">PHOTOS</div><div class="photos" style="margin-top:12px">'+photos+'</div></div>':'');
   }catch(e){
-    app.innerHTML='<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="error">'+esc(e.message)+'</div>';
+    app.innerHTML='<div class="brand-lockup"><div class="brand-mikes">Mike’s Cascade</div><div class="brand-yard">Towing Yard</div><div class="brand-powered">Powered by TowTag</div></div><div class="error">'+esc(e.message)+'</div>';
   }
 }
 
