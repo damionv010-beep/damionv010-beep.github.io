@@ -75,51 +75,121 @@ async function api(path,opt={}){
   if(!r.ok)throw new Error((d&&d.message)||(d&&d.error)||('Request failed '+r.status));
   return d;
 }
+function authBrand(){
+  return '<div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><p class="muted">Vehicle records, billing, invoices + QR tags</p>';
+}
+function togglePassword(id='pw',buttonId='showPw'){
+  const el=document.getElementById(id),btn=document.getElementById(buttonId);
+  if(!el)return;
+  const showing=el.type==='text';
+  el.type=showing?'password':'text';
+  if(btn)btn.textContent=showing?'Show':'Hide';
+}
+function passwordField(id='pw',autocomplete='current-password'){
+  return '<div style="position:relative"><input id="'+id+'" class="input" style="padding-right:78px" type="password" autocomplete="'+autocomplete+'"><button id="showPw" type="button" onclick="togglePassword(\''+id+'\',\'showPw\')" style="position:absolute;right:8px;top:10px;border:0;background:transparent;color:#8dff3f;font-weight:800;padding:10px">Show</button></div>';
+}
 function loginScreen(msg=''){
-  app.innerHTML='<div style="padding-top:10vh"><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><p class="muted">Vehicle impound records + QR tags</p>'+msg+
-  '<div class="card"><label class="small muted">Email</label><input id="email" class="input" type="email" autocomplete="email" autocapitalize="none">'+
-  '<label class="small muted">Password</label><input id="pw" class="input" type="password" autocomplete="current-password">'+
-  '<button class="btn" onclick="login()">Sign In</button><button class="btn secondary" onclick="signup()">Create Account</button></div></div>';
+  const saved=localStorage.getItem('towtag_email')||'';
+  app.innerHTML='<div style="padding-top:8vh">'+authBrand()+msg+
+  '<div class="card"><div class="h1" style="font-size:22px;margin-top:0">Staff Sign In</div><p class="muted" style="margin-top:4px">TowTag keeps you signed in on this device.</p>'+
+  '<label class="small muted">EMAIL</label><input id="email" name="email" class="input" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" value="'+esc(saved)+'">'+
+  '<label class="small muted">PASSWORD</label>'+passwordField('pw','current-password')+
+  '<label class="toggle" style="margin:0 0 6px"><input id="rememberEmail" type="checkbox" '+(saved?'checked':'')+'> Remember my email</label>'+
+  '<button class="btn" onclick="login()">Sign In</button><button class="btn secondary" onclick="createAccountScreen()">Create Staff Account</button>'+
+  '<p class="small muted" style="margin-bottom:0">New accounts need the Mike’s Cascade staff access code once.</p></div></div>';
+  setTimeout(()=>{
+    const e=document.getElementById('email'),p=document.getElementById('pw');
+    if(saved&&p)p.focus(); else if(e)e.focus();
+    if(p)p.addEventListener('keydown',ev=>{if(ev.key==='Enter')login()});
+  },0);
 }
 async function login(){
+  const e=(document.getElementById('email')?.value||'').trim().toLowerCase();
+  const p=document.getElementById('pw')?.value||'';
   try{
-    const r=await fetch(BASE+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:email.value.trim(),password:pw.value})});
-    const d=await r.json(); if(!r.ok)throw new Error(d.error_description||d.msg||d.message||'Sign in failed');
+    if(!e||!p)throw new Error('Enter your email and password.');
+    const r=await fetch(BASE+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});
+    const d=await r.json();
+    if(!r.ok){
+      const raw=d.error_description||d.msg||d.message||'Sign in failed';
+      if(/invalid login credentials/i.test(raw))throw new Error('Email or password is incorrect.');
+      throw new Error(raw);
+    }
+    if(document.getElementById('rememberEmail')?.checked)localStorage.setItem('towtag_email',e);else localStorage.removeItem('towtag_email');
     saveSession(d); await boot();
   }catch(e){loginScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
-async function signup(){
+function createAccountScreen(msg=''){
+  const saved=localStorage.getItem('towtag_email')||'';
+  app.innerHTML='<div style="padding-top:5vh">'+authBrand()+msg+
+  '<div class="card"><button class="link" onclick="loginScreen()">‹ Back to Sign In</button><div class="h1" style="font-size:22px">Create Staff Account</div>'+
+  '<p class="muted">Do this once per person. After that, just sign in normally.</p>'+
+  '<label class="small muted">STAFF MEMBER</label><select id="newStaffName" class="input"><option value="Damion">Damion</option><option value="Mike">Mike</option></select>'+
+  '<label class="small muted">EMAIL</label><input id="newEmail" class="input" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" value="'+esc(saved)+'">'+
+  '<label class="small muted">PASSWORD</label>'+passwordField('newPw','new-password')+
+  '<div class="small muted" style="margin:-4px 0 10px">Use at least 6 characters. iPhone can save it to Passwords.</div>'+
+  '<label class="small muted">STAFF ACCESS CODE</label><input id="staffCode" class="input" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="Mike’s Cascade staff code">'+
+  '<button class="btn" onclick="createStaffAccount()">Create Account & Enter TowTag</button><button class="btn secondary" onclick="loginScreen()">Cancel</button></div></div>';
+}
+async function callStaffJoin(displayName,staffCode){
+  if(!session?.access_token)throw new Error('Sign in required.');
+  const r=await fetch(BASE+'/functions/v1/towtag-staff-join',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({displayName,staffCode})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Could not activate TowTag access.');
+  return d;
+}
+async function createStaffAccount(){
+  const displayName=document.getElementById('newStaffName')?.value||'';
+  const e=(document.getElementById('newEmail')?.value||'').trim().toLowerCase();
+  const p=document.getElementById('newPw')?.value||'';
+  const code=(document.getElementById('staffCode')?.value||'').trim().toUpperCase();
   try{
-    const r=await fetch(BASE+'/auth/v1/signup',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:email.value.trim(),password:pw.value})});
-    const d=await r.json(); if(!r.ok)throw new Error(d.msg||d.message||'Sign up failed');
-    if(d.access_token){saveSession(d);await boot()}
-    else loginScreen('<div class="notice">Account created. Check your email, confirm it, then come back and sign in.</div>');
-  }catch(e){loginScreen('<div class="error">'+esc(e.message)+'</div>')}
+    if(!e)throw new Error('Enter an email address.');
+    if(p.length<6)throw new Error('Password must be at least 6 characters.');
+    if(!code)throw new Error('Enter the staff access code.');
+    const r=await fetch(BASE+'/auth/v1/signup',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,data:{display_name:displayName}})});
+    const d=await r.json();
+    if(!r.ok){
+      const raw=d.msg||d.message||'Account creation failed';
+      if(/already registered|already exists|user already/i.test(raw)){
+        localStorage.setItem('towtag_email',e);
+        loginScreen('<div class="notice">That email already has an account. Sign in below; TowTag will let you activate staff access if needed.</div>');
+        return;
+      }
+      throw new Error(raw);
+    }
+    localStorage.setItem('towtag_email',e);
+    if(d.access_token){
+      saveSession(d);
+      await callStaffJoin(displayName,code);
+      await boot();
+    }else{
+      loginScreen('<div class="notice">Account created. Check your email to confirm it, then sign in. TowTag will ask for the staff access code once.</div>');
+    }
+  }catch(e){createAccountScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
 async function boot(){
   try{
     user=await api('/auth/v1/user');
-    const m=await api('/rest/v1/staff_members?select=user_id,role,active&user_id=eq.'+encodeURIComponent(user.id));
-    if(!m.length){setupScreen();return}
+    const m=await api('/rest/v1/staff_members?select=user_id,role,active,display_name&user_id=eq.'+encodeURIComponent(user.id));
+    if(!m.length){staffJoinScreen();return}
+    if(!m[0].active)throw new Error('This TowTag staff account is disabled.');
     await load(); home();
   }catch(e){loginScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
-function setupScreen(){
-  app.innerHTML='<div style="padding-top:8vh"><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="card"><h2>Finish first-time setup</h2>'+
-  '<p class="muted">Enter the one-time TowTag setup code from ChatGPT. This only creates the first administrator.</p>'+
-  '<input id="setupCode" class="input" placeholder="Setup code" autocapitalize="characters">'+
-  '<button class="btn" onclick="claimAdmin()">Activate TowTag Admin</button><button class="btn secondary" onclick="logout()">Sign Out</button></div></div>';
+function staffJoinScreen(msg=''){
+  const suggested=(user?.user_metadata?.display_name==='Mike')?'Mike':'Damion';
+  app.innerHTML='<div style="padding-top:7vh">'+authBrand()+msg+
+  '<div class="card"><div class="h1" style="font-size:22px">Activate Staff Access</div><p class="muted">Your login is valid. Enter the yard code once to connect this account to TowTag.</p>'+
+  '<label class="small muted">STAFF MEMBER</label><select id="joinStaffName" class="input"><option value="Damion" '+(suggested==='Damion'?'selected':'')+'>Damion</option><option value="Mike" '+(suggested==='Mike'?'selected':'')+'>Mike</option></select>'+
+  '<label class="small muted">STAFF ACCESS CODE</label><input id="joinStaffCode" class="input" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="Mike’s Cascade staff code">'+
+  '<button class="btn" onclick="activateStaffAccess()">Activate TowTag</button><button class="btn secondary" onclick="logout()">Sign Out</button></div></div>';
 }
-async function claimAdmin(){
+async function activateStaffAccess(){
   try{
-    const r=await fetch(BASE+'/functions/v1/towtag-bootstrap',{method:'POST',
-      headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
-      body:JSON.stringify({setupCode:setupCode.value.trim().toUpperCase()})});
-    const d=await r.json(); if(!r.ok)throw new Error(d.error||'Setup failed');
-    await load(); home();
-  }catch(e){alert(e.message)}
+    await callStaffJoin(document.getElementById('joinStaffName')?.value||'',(document.getElementById('joinStaffCode')?.value||'').trim().toUpperCase());
+    await boot();
+  }catch(e){staffJoinScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
 async function load(){vehicles=await api('/rest/v1/vehicles?select=*&order=tow_date.desc')||[]}
 const title=v=>[v.year,v.make,v.model].filter(Boolean).join(' ')||'Vehicle';
@@ -248,26 +318,31 @@ function billingCard(v){
 
 function home(){
   selected=null;
-  const towCount=vehicles.filter(v=>(v.record_type||'tow')!=='company_owned').length;
-  const saleCount=vehicles.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale').length;
-  const scrapCount=vehicles.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap').length;
-  app.innerHTML='<div class="top"><div><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="muted small">'+vehicles.length+' total · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap</div></div><button class="link" onclick="logout()">Sign Out</button></div>'+
+  const active=vehicles.filter(v=>!v.archived_at);
+  const archivedCount=vehicles.length-active.length;
+  const towCount=active.filter(v=>(v.record_type||'tow')!=='company_owned').length;
+  const saleCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale').length;
+  const scrapCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap').length;
+  app.innerHTML='<div class="top"><div><div class="brand">Mike’s Cascade</div><div class="site-name"><span>TOWING YARD</span> · Powered by TowTag</div><div class="muted small">'+active.length+' active · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap · '+archivedCount+' archived</div></div><button class="link" onclick="logout()">Sign Out</button></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
-  '<div class="choice-grid filters" style="grid-template-columns:repeat(4,1fr);margin-top:12px"><button class="choice active" data-filter onclick="setHomeFilter(\'all\',this)">All</button><button class="choice" data-filter onclick="setHomeFilter(\'tow\',this)">Tows</button><button class="choice" data-filter onclick="setHomeFilter(\'sale\',this)">For Sale</button><button class="choice" data-filter onclick="setHomeFilter(\'scrap\',this)">Scrap</button></div>'+
+  '<div class="choice-grid filters" style="grid-template-columns:repeat(5,1fr);margin-top:12px"><button class="choice active" data-filter onclick="setHomeFilter(\'all\',this)">Active</button><button class="choice" data-filter onclick="setHomeFilter(\'tow\',this)">Tows</button><button class="choice" data-filter onclick="setHomeFilter(\'sale\',this)">For Sale</button><button class="choice" data-filter onclick="setHomeFilter(\'scrap\',this)">Scrap</button><button class="choice" data-filter onclick="setHomeFilter(\'archive\',this)">Archive</button></div>'+
   '<input id="search" class="input" placeholder="Search plate, VIN, tow #, driver..." oninput="render(this.value)"><div id="list"></div>';
   homeFilter='all'; render('');
 }
 function render(q){
   q=(q||'').toLowerCase();
   let rows=vehicles.filter(v=>JSON.stringify([v.year,v.make,v.model,v.color,v.plate,v.vin,v.yard_location,v.impound_type,v.tow_number,v.driver_name,v.record_type,v.owned_disposition,v.equipment_type,v.other_billable_work]).toLowerCase().includes(q));
+  if(homeFilter==='archive')rows=rows.filter(v=>!!v.archived_at);
+  else rows=rows.filter(v=>!v.archived_at);
   if(homeFilter==='tow')rows=rows.filter(v=>(v.record_type||'tow')!=='company_owned');
   if(homeFilter==='sale')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale');
   if(homeFilter==='scrap')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap');
   el('list').innerHTML=rows.map(v=>{
     const owned=v.record_type==='company_owned';
-    const badge=owned?ownedLabel(v.owned_disposition):v.status;
+    const badge=v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):v.status);
     const extra=owned&&v.owned_disposition==='for_sale'&&v.asking_price!=null?' · '+money(v.asking_price):'';
-    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+extra+'</div><div class="small muted" style="margin-top:7px">'+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill">'+esc(badge)+'</span></div></button>';
+    const archived=v.archived_at?' · Archived '+new Date(v.archived_at).toLocaleDateString():'';
+    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+extra+'</div><div class="small muted" style="margin-top:7px">'+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill">'+esc(badge)+'</span>'+esc(archived)+'</div></button>';
   }).join('')||'<div class="card muted">No matching vehicles.</div>';
 }
 
@@ -348,12 +423,13 @@ function detail(id){
   const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Reason</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
   '<div class="card kv"><div><span>Added</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
   const statusCard=!owned?'<div class="card"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">This is an older record that was previously marked Auction. Auction is no longer available for new records.</div>':'')+'<select id="vehicleStatus" class="input">'+statusOptions(v.status)+'</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>':'';
+  const archiveCard=v.archived_at?'<div class="card"><div class="small muted">ARCHIVED</div><div class="notice">This vehicle left the active yard list on '+esc(new Date(v.archived_at).toLocaleString())+'. All photos, invoices, billing and TowTag data are still saved.</div><button class="btn secondary" onclick="restoreVehicle()">Restore to Active Vehicles</button></div>':'<div class="card"><div class="small muted">ARCHIVE</div><p class="muted">Use this when the vehicle has left the yard. Nothing is deleted.</p><button class="btn secondary" onclick="archiveVehicle()">Archive Vehicle</button></div>';
   app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill">'+esc(badge)+'</span></div>'+towInfo+ownedCard(v)+billingCard(v)+
   '<div class="row"><button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button><button class="btn secondary" onclick="printTowSheet()">Print Tow Sheet</button></div>'+(!owned?'<button class="btn" onclick="invoiceForm()">'+(v.invoice_number?'Invoice # '+esc(v.invoice_number):'Create Invoice')+'</button>':'')+statusCard+releaseCard+
   '<div class="card" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div><input id="cameraPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotos(this.files)"><input id="libraryPhoto" type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this.files)">'+
   '<div class="small muted" style="margin-top:14px">QUICK PHOTO CHECKLIST</div><div class="choice-grid photo-choices" style="grid-template-columns:repeat(3,1fr)"><button class="choice" onclick="takeLabeledPhoto(\'Front\')">Front</button><button class="choice" onclick="takeLabeledPhoto(\'Rear\')">Rear</button><button class="choice" onclick="takeLabeledPhoto(\'Driver side\')">Driver Side</button><button class="choice" onclick="takeLabeledPhoto(\'Passenger side\')">Passenger Side</button><button class="choice" onclick="takeLabeledPhoto(\'Interior\')">Interior</button><button class="choice" onclick="takeLabeledPhoto(\'Damage\')">Damage</button></div>'+ 
   '<div class="small muted" style="margin-top:12px">PHOTO LABEL</div><select id="photoCaption" class="input"><option value="Vehicle photo">General Photo</option><option value="Front">Front</option><option value="Rear">Rear</option><option value="Driver side">Driver Side</option><option value="Passenger side">Passenger Side</option><option value="Interior">Interior</option><option value="Damage">Damage</option><option value="VIN">VIN</option><option value="Odometer">Odometer</option><option value="Personal property">Personal Property</option></select><div class="row"><button class="btn" onclick="cameraPhoto.click()">Take Photo</button><button class="btn secondary" onclick="libraryPhoto.click()">Choose From Photos</button></div><div id="staffPhotos" class="photos" style="margin-top:12px"></div><div class="row"><button class="btn secondary" onclick="location.href=\''+publicUrl+'\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div></div>'+ 
-  '<div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p><button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
+  archiveCard+'<div class="card"><div class="small muted">DANGER ZONE</div><p class="muted">Permanently removes this vehicle and its uploaded photos. This cannot be undone.</p><button class="btn danger" onclick="deleteVehicle()">Delete Vehicle Permanently</button></div>';
   loadStaffPhotos(v.qr_token);
 }
 
@@ -407,8 +483,9 @@ async function completeOwnedDisposition(kind){
   if(input.trim()!==''&&!Number.isFinite(amount)){alert('Enter a valid amount.');return}
   try{
     const id=selected.id;
-    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({owned_disposition:kind,disposition_amount:amount,disposition_completed_at:new Date().toISOString()})});
-    await load(); detail(id); alert(kind==='sold'?'Vehicle marked sold.':'Vehicle marked scrapped.');
+    const now=new Date().toISOString();
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({owned_disposition:kind,disposition_amount:amount,disposition_completed_at:now,archived_at:now,archived_by:user.id})});
+    await load(); detail(id); alert(kind==='sold'?'Vehicle marked sold and moved to Archive.':'Vehicle marked scrapped and moved to Archive.');
   }catch(e){alert('Update failed: '+e.message)}
 }
 
@@ -417,9 +494,10 @@ async function releaseVehicle(){
   const name=val('releasedTo'); if(!name){alert('Enter who the vehicle is being released to.');return}
   const id=selected.id;
   try{
-    const body={status:'released',release_at:new Date().toISOString(),released_to:name,release_id_checked:checked('releaseIdChecked'),release_authorized_by:val('releaseAuthorized')||null,release_notes:val('releaseNotes')||null};
+    const now=new Date().toISOString();
+    const body={status:'released',release_at:now,released_to:name,release_id_checked:checked('releaseIdChecked'),release_authorized_by:val('releaseAuthorized')||null,release_notes:val('releaseNotes')||null,archived_at:now,archived_by:user.id};
     await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});
-    await load(); detail(id); alert('Vehicle released and recorded.');
+    await load(); detail(id); alert('Vehicle released and moved to Archive.');
   }catch(e){alert('Release failed: '+e.message)}
 }
 
@@ -608,10 +686,30 @@ async function updateVehicleStatus(){
   if(!selected)return;
   try{
     const id=selected.id,newStatus=val('vehicleStatus');
-    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({status:newStatus})});
-    await load(); detail(id); alert('Vehicle status updated.');
+    const body={status:newStatus};
+    if(newStatus==='released'&&!selected.archived_at){body.archived_at=new Date().toISOString();body.archived_by=user.id;}
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});
+    await load(); detail(id); alert(newStatus==='released'?'Vehicle status updated and moved to Archive.':'Vehicle status updated.');
   }catch(e){alert('Status update failed: '+e.message)}
 }
+async function archiveVehicle(){
+  if(!selected||selected.archived_at)return;
+  if(!confirm('Archive '+title(selected)+'?\n\nIt will leave the active vehicle list, but its TowTag, photos, invoice and records will stay saved.'))return;
+  try{
+    const id=selected.id,now=new Date().toISOString();
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({archived_at:now,archived_by:user.id})});
+    await load(); detail(id); alert('Vehicle moved to Archive.');
+  }catch(e){alert('Archive failed: '+e.message)}
+}
+async function restoreVehicle(){
+  if(!selected||!selected.archived_at)return;
+  try{
+    const id=selected.id;
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({archived_at:null,archived_by:null})});
+    await load(); detail(id); alert('Vehicle restored to the active list.');
+  }catch(e){alert('Restore failed: '+e.message)}
+}
+
 async function deleteVehicle(){
   if(!selected)return;
   const vehicleName=title(selected); if(!confirm('Permanently delete '+vehicleName+' from TowTag?\n\nThis removes the vehicle record and its photos. This cannot be undone.'))return;
