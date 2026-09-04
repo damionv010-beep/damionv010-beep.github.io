@@ -144,6 +144,7 @@ function loginScreen(msg=''){
   '<label class="small muted">PASSWORD</label>'+passwordField('pw','current-password')+
   '<label class="toggle" style="margin:0 0 6px"><input id="rememberEmail" type="checkbox" '+(saved?'checked':'')+'> Remember my email</label>'+
   '<button class="btn" onclick="login()">Sign In</button><button class="btn secondary" onclick="createAccountScreen()">Create Staff Account</button>'+
+  '<button class="link" style="width:100%;text-align:center;margin-top:8px" onclick="forgotPasswordScreen()">Forgot password?</button>'+
   '<p class="small muted" style="margin-bottom:0">New accounts need the Mike’s Cascade staff access code once.</p></div></div>';
   setTimeout(()=>{
     const e=document.getElementById('email'),p=document.getElementById('pw');
@@ -166,6 +167,52 @@ async function login(){
     if(document.getElementById('rememberEmail')?.checked)localStorage.setItem('towtag_email',e);else localStorage.removeItem('towtag_email');
     saveSession(d); await boot();
   }catch(e){loginScreen('<div class="error">'+esc(e.message)+'</div>')}
+}
+
+function forgotPasswordScreen(msg=''){
+  const saved=localStorage.getItem('towtag_email')||'';
+  app.innerHTML='<div style="padding-top:8vh">'+authBrand()+msg+
+  '<div class="card"><button class="link" onclick="loginScreen()">‹ Back to Sign In</button><div class="h1" style="font-size:22px">Reset Password</div><p class="muted">Enter the staff account email. TowTag will send a password reset link.</p>'+ 
+  '<label class="small muted">EMAIL</label><input id="resetEmail" class="input" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" value="'+esc(saved)+'">'+
+  '<button class="btn" onclick="sendPasswordReset()">Send Reset Link</button><button class="btn secondary" onclick="loginScreen()">Cancel</button></div></div>';
+}
+async function sendPasswordReset(){
+  const email=(document.getElementById('resetEmail')?.value||'').trim().toLowerCase();
+  try{
+    if(!email)throw new Error('Enter the account email.');
+    localStorage.setItem('towtag_email',email);
+    const r=await fetch(BASE+'/auth/v1/recover?redirect_to='+encodeURIComponent(SITE),{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
+    let d={};try{d=await r.json()}catch{}
+    if(!r.ok)throw new Error(d.msg||d.message||d.error_description||'Could not send reset email.');
+    forgotPasswordScreen('<div class="notice">Reset email sent. Open the link in that email on this device, then choose a new password.</div>');
+  }catch(e){forgotPasswordScreen('<div class="error">'+esc(e.message)+'</div>')}
+}
+function passwordRecoveryFromUrl(){
+  const h=new URLSearchParams((location.hash||'').replace(/^#/,''));
+  if(h.get('type')!=='recovery'||!h.get('access_token'))return false;
+  session={access_token:h.get('access_token'),refresh_token:h.get('refresh_token')||'',expires_in:Number(h.get('expires_in')||3600),expires_at:Math.floor(Date.now()/1000)+Number(h.get('expires_in')||3600)};
+  return true;
+}
+function recoveryPasswordScreen(msg=''){
+  app.innerHTML='<div style="padding-top:8vh">'+authBrand()+msg+
+  '<div class="card"><div class="h1" style="font-size:22px">Choose New Password</div><p class="muted">Enter a new password for this TowTag staff account.</p>'+ 
+  '<label class="small muted">NEW PASSWORD</label><div style="position:relative"><input id="recoveryPw" class="input" style="padding-right:78px" type="password" autocomplete="new-password"><button id="showRecoveryPw" type="button" onclick="togglePassword(\'recoveryPw\',\'showRecoveryPw\')" style="position:absolute;right:8px;top:10px;border:0;background:transparent;color:#8dff3f;font-weight:800;padding:10px">Show</button></div>'+ 
+  '<label class="small muted">CONFIRM PASSWORD</label><input id="recoveryPw2" class="input" type="password" autocomplete="new-password">'+
+  '<button class="btn" onclick="finishPasswordRecovery()">Save New Password</button></div></div>';
+}
+async function finishPasswordRecovery(){
+  const p1=document.getElementById('recoveryPw')?.value||'',p2=document.getElementById('recoveryPw2')?.value||'';
+  try{
+    if(!session?.access_token)throw new Error('This reset link is no longer valid. Request a new one.');
+    if(p1.length<6)throw new Error('Password must be at least 6 characters.');
+    if(p1!==p2)throw new Error('Passwords do not match.');
+    const r=await fetch(BASE+'/auth/v1/user',{method:'PUT',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({password:p1})});
+    let d={};try{d=await r.json()}catch{}
+    if(!r.ok)throw new Error(d.msg||d.message||d.error_description||'Could not update password.');
+    history.replaceState(null,'',location.pathname+location.search);
+    session=null;localStorage.removeItem('towtag_session');user=null;staffMember=null;
+    loginScreen('<div class="notice">Password updated. Sign in with your new password.</div>');
+  }catch(e){recoveryPasswordScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
 function createAccountScreen(msg=''){
   const saved=localStorage.getItem('towtag_email')||'';
@@ -1216,7 +1263,17 @@ async function adminStaffCall(payload){
 function staffRowsHtml(rows){
   if(!Array.isArray(rows)||!rows.length)return '<div class="card muted">No staff accounts found.</div>';
   return rows.map((s,i)=>{
-    try{return '<div class="staff-row"><div style="font-weight:850">'+esc(s.display_name||'Unnamed staff')+(s.joined===false?' <span class="pill">Pending</span>':'')+'</div><div class="email">'+esc(s.email||'Email unavailable')+'</div><input id="staffName_'+i+'" class="input" placeholder="Display name" value="'+esc(s.display_name||'')+'"><div class="row"><select id="staffRole_'+i+'" class="input"><option value="driver" '+(s.role!=='admin'?'selected':'')+'>Driver</option><option value="admin" '+(s.role==='admin'?'selected':'')+'>Admin</option></select><label class="toggle" style="margin:5px 0 10px"><input id="staffActive_'+i+'" type="checkbox" '+(s.active?'checked':'')+'> Active access</label></div><button class="btn secondary" onclick="saveStaffAccount(\''+esc(s.user_id)+'\','+i+')">Save Staff Access</button><div class="small muted" style="margin-top:7px">'+(s.last_sign_in_at?'Last sign in '+esc(new Date(s.last_sign_in_at).toLocaleString()):'')+'</div></div>'}catch{return ''}
+    try{
+      const self=s.user_id===user?.id;
+      return '<div class="staff-row"><div style="font-weight:850">'+esc(s.display_name||'Unnamed staff')+(self?' <span class="pill">You</span>':'')+'</div><div class="email">'+esc(s.email||'Email unavailable')+'</div>'+ 
+      '<input id="staffName_'+i+'" class="input" placeholder="Display name" value="'+esc(s.display_name||'')+'"><div class="row"><select id="staffRole_'+i+'" class="input"><option value="driver" '+(s.role!=='admin'?'selected':'')+'>Driver</option><option value="admin" '+(s.role==='admin'?'selected':'')+'>Admin</option></select><label class="toggle" style="margin:5px 0 10px"><input id="staffActive_'+i+'" type="checkbox" '+(s.active?'checked':'')+'> Active access</label></div>'+ 
+      '<button class="btn secondary" onclick="saveStaffAccount(\''+esc(s.user_id)+'\','+i+')">Save Staff Access</button>'+ 
+      '<details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:800;color:#baff83">Password & account tools</summary><div style="margin-top:10px"><label class="small muted">SET NEW PASSWORD</label><div style="position:relative"><input id="staffPassword_'+i+'" class="input" style="padding-right:78px" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button id="showStaffPw_'+i+'" type="button" onclick="togglePassword(\'staffPassword_'+i+'\',\'showStaffPw_'+i+'\')" style="position:absolute;right:8px;top:10px;border:0;background:transparent;color:#8dff3f;font-weight:800;padding:10px">Show</button></div>'+ 
+      '<button class="btn secondary" onclick="setStaffPassword(\''+esc(s.user_id)+'\','+i+')">Set New Password</button>'+ 
+      (!self?'<button class="btn danger" onclick="deleteStaffAccount(\''+esc(s.user_id)+'\',\''+esc(s.display_name||s.email||'this account')+'\')">Delete Staff Account</button>':'<div class="small muted" style="margin-top:8px">You cannot delete the account you are currently signed into.</div>')+
+      '<div class="small muted" style="margin-top:8px">Existing passwords cannot be viewed. TowTag can only replace them with a new password.</div></div></details>'+ 
+      '<div class="small muted" style="margin-top:7px">'+(s.last_sign_in_at?'Last sign in '+esc(new Date(s.last_sign_in_at).toLocaleString()):'')+'</div></div>';
+    }catch{return ''}
   }).join('');
 }
 async function adminStaffScreen(){
@@ -1224,7 +1281,7 @@ async function adminStaffScreen(){
   app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">Staff Accounts</div><div class="card muted">Loading staff…</div>';
   try{
     const d=await adminStaffCall({action:'list'}),rows=Array.isArray(d.staff)?d.staff:[];
-    app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">Staff Accounts</div><p class="muted">Manage names, roles, and active access.</p>'+staffRowsHtml(rows);
+    app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">Staff Accounts</div><p class="muted">Manage names, roles, access, passwords, or remove old accounts.</p>'+staffRowsHtml(rows);
   }catch(e){
     app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">Staff Accounts</div><div class="error">'+esc(e.message||'Staff could not load.')+'</div><button class="btn secondary" onclick="adminStaffScreen()">Retry Staff Menu</button>';
   }
@@ -1234,6 +1291,26 @@ async function saveStaffAccount(userId,i){
     await adminStaffCall({action:'update',userId,displayName:val('staffName_'+i),role:val('staffRole_'+i),active:checked('staffActive_'+i)});
     alert('Staff access updated.');await adminStaffScreen();
   }catch(e){alert('Could not update staff: '+e.message)}
+}
+
+async function setStaffPassword(userId,i){
+  const newPassword=document.getElementById('staffPassword_'+i)?.value||'';
+  try{
+    if(newPassword.length<6)throw new Error('Password must be at least 6 characters.');
+    if(!confirm('Set a new password for this staff account? Their old password will stop working immediately.'))return;
+    await adminStaffCall({action:'set_password',userId,newPassword});
+    alert('New password set.');
+    const input=document.getElementById('staffPassword_'+i);if(input)input.value='';
+  }catch(e){alert('Could not change password: '+e.message)}
+}
+async function deleteStaffAccount(userId,label){
+  try{
+    if(!confirm('Permanently delete '+label+'? This removes their TowTag login and staff access.'))return;
+    if(!confirm('Delete this account now? This cannot be undone.'))return;
+    await adminStaffCall({action:'delete',userId});
+    alert('Staff account deleted.');
+    await adminStaffScreen();
+  }catch(e){alert('Could not delete staff account: '+e.message)}
 }
 function logout(){staffMember=null;saveSession(null);loginScreen()}
 
@@ -1354,7 +1431,8 @@ printInvoiceFromForm=function(){
 };
 
 const tag=new URLSearchParams(location.search).get('tag');
-if(tag){publicView(tag)}
+if(passwordRecoveryFromUrl()){recoveryPasswordScreen()}
+else if(tag){publicView(tag)}
 else{
   try{
     session=JSON.parse(localStorage.getItem('towtag_session')||'null');
