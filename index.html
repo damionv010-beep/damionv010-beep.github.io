@@ -335,7 +335,34 @@ const val=id=>(el(id)?.value||'').trim();
 const checked=id=>!!el(id)?.checked;
 const pref=(key,fallback='')=>localStorage.getItem('towtag_'+key)||fallback;
 const money=v=>v===null||v===undefined||v===''?'—':'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-const recordLabel=v=>v==='company_owned'?'Company Owned':'Tow / Impound';
+const recordLabel=v=>({
+  tow:'Tow / Impound',
+  accident_tow:'Accident / Tow-In',
+  storage_only:'Storage Only',
+  lien_foreclosure:'Lien Foreclosure',
+  company_owned:'Company Owned'
+}[v]||'Tow / Impound');
+const statusLabel=v=>({
+  in_yard:'In Yard',
+  accident:'Accident / Tow-In',
+  awaiting_pickup:'Awaiting Owner Pickup',
+  awaiting_insurance:'Awaiting Insurance',
+  awaiting_agency_release:'Awaiting Agency Release',
+  impounded:'Impounded',
+  hold:'Hold',
+  storage_only:'Storage Only',
+  lien_foreclosure:'Lien Foreclosure',
+  released:'Released',
+  auction:'Legacy Auction',
+  other:'Other'
+}[v]||'Not specified');
+function suggestedStatus(recordType,reason,holdType){
+  if(holdType&&holdType!=='none')return 'hold';
+  if(recordType==='lien_foreclosure')return 'lien_foreclosure';
+  if(recordType==='storage_only')return 'storage_only';
+  if(recordType==='accident_tow'||reason==='motor_vehicle_accident'||reason==='preference_motor_vehicle_accident')return 'accident';
+  return 'in_yard';
+}
 const ownedLabel=v=>({for_sale:'For Sale',scrap:'Going to Scrap',sold:'Sold',scrapped:'Scrapped'}[v]||'Not specified');
 const equipmentLabel=v=>({wheel_lift:'Wheel Lift',wrecker:'Wrecker',medium_duty:'Medium Duty',flat_bed:'Flat Bed'}[v]||'Not specified');
 const yesNo=v=>v?'Yes':'No';
@@ -446,11 +473,19 @@ function confirmBillingBeforeRelease(v){
   return confirm(lines.join('\n'));
 }
 
-function statusOptions(current){
-  return (current==='auction'?'<option value="auction" selected>Legacy Auction</option>':'')+
-  '<option value="impounded" '+(current==='impounded'?'selected':'')+'>Impounded</option>'+
-  '<option value="hold" '+(current==='hold'?'selected':'')+'>Hold</option>'+
-  '<option value="released" '+(current==='released'?'selected':'')+'>Released</option>'+
+function statusOptions(current,includeAuto=false){
+  return (includeAuto?'<option value="">Auto / Suggested</option>':'')+
+  (current==='auction'?'<option value="auction" selected>Legacy Auction</option>':'')+
+  '<option value="in_yard" '+(current==='in_yard'?'selected':'')+'>In Yard</option>'+ 
+  '<option value="accident" '+(current==='accident'?'selected':'')+'>Accident / Tow-In</option>'+ 
+  '<option value="awaiting_pickup" '+(current==='awaiting_pickup'?'selected':'')+'>Awaiting Owner Pickup</option>'+ 
+  '<option value="awaiting_insurance" '+(current==='awaiting_insurance'?'selected':'')+'>Awaiting Insurance</option>'+ 
+  '<option value="awaiting_agency_release" '+(current==='awaiting_agency_release'?'selected':'')+'>Awaiting Agency Release</option>'+ 
+  '<option value="impounded" '+(current==='impounded'?'selected':'')+'>Impounded</option>'+ 
+  '<option value="hold" '+(current==='hold'?'selected':'')+'>Hold</option>'+ 
+  '<option value="storage_only" '+(current==='storage_only'?'selected':'')+'>Storage Only</option>'+ 
+  '<option value="lien_foreclosure" '+(current==='lien_foreclosure'?'selected':'')+'>Lien Foreclosure</option>'+ 
+  '<option value="released" '+(current==='released'?'selected':'')+'>Released</option>'+ 
   '<option value="other" '+(current==='other'?'selected':'')+'>Other</option>';
 }
 function setHomeFilter(mode,btn){
@@ -471,6 +506,7 @@ function toggleIntakeType(){
   const owned=val('recordType')==='company_owned';
   if(el('towIntake'))el('towIntake').style.display=owned?'none':'block';
   if(el('ownedIntake'))el('ownedIntake').style.display=owned?'block':'none';
+  if(el('intakeStatusWrap'))el('intakeStatusWrap').style.display=owned?'none':'block';
 }
 function toggleOwnedPrice(){
   if(!el('askingPriceWrap'))return;
@@ -616,7 +652,7 @@ function render(q){
   const note=globalSearch?'<div class="search-all-note">Searching active + archived + trash records</div>':'';
   el('list').innerHTML=note+(rows.map(v=>{
     const owned=v.record_type==='company_owned';
-    const badge=v.deleted_at?'Trash':(v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):v.status));
+    const badge=v.deleted_at?'Trash':(v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):statusLabel(v.status)));
     const extra=owned&&v.owned_disposition==='for_sale'&&v.asking_price!=null?' · '+money(v.asking_price):'';
     const archived=v.archived_at&&!v.deleted_at?' · Archived '+new Date(v.archived_at).toLocaleDateString():'';
     const trashed=v.deleted_at?' · Trashed '+new Date(v.deleted_at).toLocaleDateString():'';
@@ -641,7 +677,7 @@ async function syncOfflineIntakes(silent=false){
     const item=q[i];
     try{
       const body={...(item.body||{})};
-      if((body.record_type||'tow')==='tow'&&!body.agency_id&&item.agency_name)body.agency_id=await resolveAgency(item.agency_name);
+      if((body.record_type||'tow')!=='company_owned'&&!body.agency_id&&item.agency_name)body.agency_id=await resolveAgency(item.agency_name);
       await api('/rest/v1/vehicles',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});synced++;
     }catch(e){remaining.push(item,...q.slice(i+1));break}
   }
@@ -675,7 +711,7 @@ function addForm(notice=''){
   const lastState=pref('state','OR'), savedDriver=pref('driver','Damion'), lastDriver=['Damion','Mike'].includes(savedDriver)?savedDriver:'Damion', lastEquipment=pref('equipment','wheel_lift');
   app.innerHTML='<button class="link" onclick="home()">‹ Back</button><div class="h1">Quick Intake</div><p class="muted">Get the vehicle into TowTag now. Finish the less-important details later.</p>'+
   (notice?'<div class="notice">'+esc(notice)+'</div>':'')+
-  '<div class="card"><div class="small muted">WHAT ARE WE ADDING?</div><input id="recordType" type="hidden" value="tow"><div class="choice-grid"><button class="choice active" onclick="pickChoice(\'recordType\',\'tow\',this)">Tow / Impound</button><button class="choice" onclick="pickChoice(\'recordType\',\'company_owned\',this)">Company Owned</button></div></div>'+
+  '<div class="card"><div class="small muted">RECORD TYPE</div><select id="recordType" class="input" onchange="toggleIntakeType()"><option value="tow">Tow / Impound</option><option value="accident_tow">Accident / Tow-In</option><option value="storage_only">Storage Only</option><option value="lien_foreclosure">Lien Foreclosure</option><option value="company_owned">Company Owned</option></select></div>'+
   '<div class="card"><div class="small muted">VEHICLE</div><div class="row"><input id="year" class="input" inputmode="numeric" placeholder="Year"><input id="color" class="input" placeholder="Color"></div><input id="make" class="input" placeholder="Make"><input id="model" class="input" placeholder="Model">'+
   '<div class="row"><input id="plate" class="input" placeholder="Plate" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"><input id="state" class="input" value="'+esc(lastState)+'" placeholder="State" maxlength="2" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>'+
   '<input id="vin" class="input" placeholder="VIN" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"><div class="row"><input id="odometer" class="input" inputmode="numeric" placeholder="Odometer"><div></div></div>'+ 
@@ -689,7 +725,7 @@ function addForm(notice=''){
     '<div class="row"><input id="recoveryMinutes" class="input" inputmode="numeric" placeholder="Recovery minutes"><input id="extraLaborMinutes" class="input" inputmode="numeric" placeholder="Extra labor minutes"></div><div class="row"><input id="sceneWaitMinutes" class="input" inputmode="numeric" placeholder="Scene wait minutes"><input id="billableMiles" class="input" inputmode="decimal" placeholder="Billable miles"></div><textarea id="otherBillableWork" class="input" rows="2" placeholder="Other billable work"></textarea><textarea id="billingNotes" class="input" rows="2" placeholder="Billing notes"></textarea></details>'+ 
   '</div>'+
   '<div id="ownedIntake" style="display:none"><div class="card"><div class="small muted">COMPANY-OWNED VEHICLE</div><p class="muted">Track vehicles Mike’s Cascade owns separately from impounds.</p><input id="ownedDisposition" type="hidden" value=""><div class="choice-grid"><button class="choice" onclick="pickChoice(\'ownedDisposition\',\'for_sale\',this)">For Sale</button><button class="choice" onclick="pickChoice(\'ownedDisposition\',\'scrap\',this)">Going to Scrap</button></div><div id="askingPriceWrap" style="display:none"><input id="askingPrice" class="input" inputmode="decimal" placeholder="Asking price (optional)"></div><textarea id="ownedNotes" class="input" rows="3" placeholder="Owned vehicle notes"></textarea></div></div>'+ 
-  '<details class="card"><summary>Condition, holds & staff notes</summary><div style="margin-top:12px"><div id="holdBlock"><div class="small muted">HOLD</div><select id="holdType" class="input"><option value="none">No Hold</option><option value="police_hold">Police Hold</option><option value="insurance_hold">Insurance Hold</option><option value="owner_hold">Owner Hold</option><option value="other">Other Hold</option></select><textarea id="holdNotes" class="input" rows="2" placeholder="Hold notes / instructions"></textarea></div><textarea id="conditionNotes" class="input" rows="3" placeholder="Vehicle condition / existing damage"></textarea><textarea id="propertyNotes" class="input" rows="3" placeholder="Personal property inside vehicle"></textarea><textarea id="notes" class="input" rows="3" placeholder="Staff notes"></textarea></div></details>'+ 
+  '<details class="card"><summary>Condition, holds & staff notes</summary><div style="margin-top:12px"><div id="holdBlock"><div class="small muted">HOLD</div><select id="holdType" class="input"><option value="none">No Hold</option><option value="police_hold">Police Hold</option><option value="insurance_hold">Insurance Hold</option><option value="owner_hold">Owner Hold</option><option value="other">Other Hold</option></select><textarea id="holdNotes" class="input" rows="2" placeholder="Hold notes / instructions"></textarea></div><div id="intakeStatusWrap"><div class="small muted">VEHICLE STATUS</div><select id="intakeStatus" class="input">'+statusOptions('',true)+'</select><div class="small muted" style="margin:-5px 0 10px">Leave on Auto and TowTag will choose a status from the record type, tow reason, or hold.</div></div><textarea id="conditionNotes" class="input" rows="3" placeholder="Vehicle condition / existing damage"></textarea><textarea id="propertyNotes" class="input" rows="3" placeholder="Personal property inside vehicle"></textarea><textarea id="notes" class="input" rows="3" placeholder="Staff notes"></textarea></div></details>'+ 
   '<button class="btn" onclick="saveVehicle(\'open\')">Save & Open Vehicle</button><button class="btn secondary" onclick="saveVehicle(\'next\')">Save & Add Next Vehicle</button>';
   fillAgencySuggestions();
   setTimeout(bindIntakeDraft,0);
@@ -702,7 +738,7 @@ async function saveVehicle(mode='open'){
     if(handleDuplicateBeforeSave(vinValue,val('plate'),val('state')))return;
     let agency_id=null, impound_type=null, owned_disposition=null,offlineSave=!navigator.onLine;
     const agencyName=val('agency');
-    if(record_type==='tow'){
+    if(record_type!=='company_owned'){
       impound_type=val('impoundType')||null;
       if(!offlineSave&&agencyName){try{agency_id=await resolveAgency(agencyName)}catch(e){if(looksOfflineError(e))offlineSave=true;else throw e}}
     }else{
@@ -710,15 +746,15 @@ async function saveVehicle(mode='open'){
     }
     const odo=val('odometer');
     const recoveryMinutes=val('recoveryMinutes'), extraLaborMinutes=val('extraLaborMinutes'), waitMinutes=val('sceneWaitMinutes'), miles=val('billableMiles'), ask=val('askingPrice');
-    const hold_type=record_type==='tow'?(val('holdType')||'none'):'none';
+    const hold_type=record_type!=='company_owned'?(val('holdType')||'none'):'none';
     const body={
       record_type,year:val('year')?Number(val('year')):null,make:val('make')||null,model:val('model')||null,color:val('color')||null,plate:val('plate').toUpperCase()||null,plate_state:val('state').toUpperCase()||null,vin:vinValue||null,odometer:odo?Number(odo):null,keys_status:val('keysStatus')||'unknown',
-      agency_id,impound_type,yard_location:record_type==='tow'?(val('pickup')||null):null,tow_number:record_type==='tow'?(val('towNumber').toUpperCase()||null):null,driver_name:record_type==='tow'?(val('driverName')||null):null,hold_type,hold_notes:record_type==='tow'?(val('holdNotes')||null):null,
-      status:record_type==='tow'?(hold_type!=='none'?'hold':'impounded'):'other',condition_notes:val('conditionNotes')||null,property_notes:val('propertyNotes')||null,notes:val('notes')||null,created_by:user.id,
+      agency_id,impound_type,yard_location:record_type!=='company_owned'?(val('pickup')||null):null,tow_number:record_type!=='company_owned'?(val('towNumber').toUpperCase()||null):null,driver_name:record_type!=='company_owned'?(val('driverName')||null):null,hold_type,hold_notes:record_type!=='company_owned'?(val('holdNotes')||null):null,
+      status:record_type!=='company_owned'?(val('intakeStatus')||suggestedStatus(record_type,impound_type,hold_type)):'other',condition_notes:val('conditionNotes')||null,property_notes:val('propertyNotes')||null,notes:val('notes')||null,created_by:user.id,
       owned_disposition,asking_price:record_type==='company_owned'&&ask?Number(ask):null,owned_notes:record_type==='company_owned'?(val('ownedNotes')||null):null,
-      equipment_type:record_type==='tow'?(val('equipmentType')||null):null,used_dollies:record_type==='tow'&&checked('usedDollies'),recovery_performed:record_type==='tow'&&(checked('recoveryPerformed')||!!recoveryMinutes),recovery_minutes:record_type==='tow'&&recoveryMinutes?Number(recoveryMinutes):null,winching_performed:record_type==='tow'&&checked('winchingPerformed'),cleanup_performed:record_type==='tow'&&(checked('cleanupPerformed')||checked('hazmatCleanup')),hazmat_cleanup:record_type==='tow'&&checked('hazmatCleanup'),extra_labor:record_type==='tow'&&(checked('extraLabor')||!!extraLaborMinutes),extra_labor_minutes:record_type==='tow'&&extraLaborMinutes?Number(extraLaborMinutes):null,after_hours:record_type==='tow'&&checked('afterHours'),scene_wait_minutes:record_type==='tow'&&waitMinutes?Number(waitMinutes):null,billable_miles:record_type==='tow'&&miles?Number(miles):null,other_billable_work:record_type==='tow'?(val('otherBillableWork')||null):null,billing_notes:record_type==='tow'?(val('billingNotes')||null):null
+      equipment_type:record_type!=='company_owned'?(val('equipmentType')||null):null,used_dollies:record_type!=='company_owned'&&checked('usedDollies'),recovery_performed:record_type!=='company_owned'&&(checked('recoveryPerformed')||!!recoveryMinutes),recovery_minutes:record_type!=='company_owned'&&recoveryMinutes?Number(recoveryMinutes):null,winching_performed:record_type!=='company_owned'&&checked('winchingPerformed'),cleanup_performed:record_type!=='company_owned'&&(checked('cleanupPerformed')||checked('hazmatCleanup')),hazmat_cleanup:record_type!=='company_owned'&&checked('hazmatCleanup'),extra_labor:record_type!=='company_owned'&&(checked('extraLabor')||!!extraLaborMinutes),extra_labor_minutes:record_type!=='company_owned'&&extraLaborMinutes?Number(extraLaborMinutes):null,after_hours:record_type!=='company_owned'&&checked('afterHours'),scene_wait_minutes:record_type!=='company_owned'&&waitMinutes?Number(waitMinutes):null,billable_miles:record_type!=='company_owned'&&miles?Number(miles):null,other_billable_work:record_type!=='company_owned'?(val('otherBillableWork')||null):null,billing_notes:record_type!=='company_owned'?(val('billingNotes')||null):null
     };
-    if(record_type==='tow'){
+    if(record_type!=='company_owned'){
       localStorage.setItem('towtag_state',val('state').toUpperCase()||'OR');
       if(val('driverName'))localStorage.setItem('towtag_driver',val('driverName'));
       if(val('agency'))localStorage.setItem('towtag_agency',val('agency'));
@@ -754,7 +790,7 @@ async function copyVehicleInfo(){
     if(v.impound_type)lines.push('Reason: '+impoundLabel(v.impound_type));
     if(v.tow_date)lines.push('Brought in: '+new Date(v.tow_date).toLocaleString());
     if(v.yard_location)lines.push('Picked up from: '+v.yard_location);
-    if(v.status)lines.push('Status: '+v.status);
+    if(v.status)lines.push('Status: '+statusLabel(v.status));
   }else{
     lines.push('Company Owned'+(v.owned_disposition?' · '+ownedLabel(v.owned_disposition):''));
   }
@@ -796,7 +832,7 @@ function detail(id){
   const owned=v.record_type==='company_owned';
   const qr=BASE+'/functions/v1/towtag-qr?token='+encodeURIComponent(v.qr_token);
   const publicUrl=SITE+'?tag='+encodeURIComponent(v.qr_token);
-  const badge=owned?ownedLabel(v.owned_disposition):v.status;
+  const badge=owned?ownedLabel(v.owned_disposition):statusLabel(v.status);
   const releaseCard=(!owned&&!v.deleted_at)?((v.release_at||v.status==='released')?
     '<div class="card" id="releaseCard"><div class="small muted">RELEASE RECORD</div>'+(v.release_at?'<div class="kv" style="margin-top:10px"><div><span>Released</span>'+esc(new Date(v.release_at).toLocaleString())+'</div><div><span>Released to</span>'+esc(v.released_to||'—')+'</div><div><span>ID checked</span>'+(v.release_id_checked?'Yes':'No')+'</div><div><span>Authorized by</span>'+esc(v.release_authorized_by||'—')+'</div><div style="grid-column:1/-1"><span>Release notes</span>'+esc(v.release_notes||'—')+'</div></div>':'<div class="notice">This vehicle is marked Released.</div>')+(v.release_signature_data?'<div class="small muted" style="margin-top:12px">RELEASE SIGNATURE</div><img class="signature-preview" src="'+esc(v.release_signature_data)+'">':'')+'<div class="quick-actions"><button class="btn" onclick="printReleaseReceipt()">Print Release Receipt</button><button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button></div></div>':
     '<div class="card" id="releaseCard"><div class="small muted">RELEASE VEHICLE</div><input id="releasedTo" class="input" placeholder="Released to (name)"><input id="releaseAuthorized" class="input" placeholder="Release authorized by"><label class="toggle"><input id="releaseIdChecked" type="checkbox"> ID checked</label><textarea id="releaseNotes" class="input" rows="3" placeholder="Release notes"></textarea><div class="small muted">RELEASE SIGNATURE</div><canvas id="releaseSignatureCanvas" class="signature-pad" width="600" height="180"></canvas><button class="btn secondary" type="button" onclick="clearReleaseSignature()">Clear Signature</button><button class="btn" onclick="releaseVehicle()">Release Vehicle</button></div>'):'';
@@ -820,7 +856,7 @@ function editVehicleForm(){
   if(!selected)return;
   if(selected.deleted_at){alert('Restore this vehicle from Trash before editing it.');return}
   const v=selected, owned=v.record_type==='company_owned';
-  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Cancel</button><div class="h1">Edit Vehicle</div><div class="card"><div class="small muted">RECORD TYPE</div><select id="editRecordType" class="input" onchange="toggleEditType()"><option value="tow" '+(!owned?'selected':'')+'>Tow / Impound</option><option value="company_owned" '+(owned?'selected':'')+'>Company Owned</option></select></div>'+ 
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Cancel</button><div class="h1">Edit Vehicle</div><div class="card"><div class="small muted">RECORD TYPE</div><select id="editRecordType" class="input" onchange="toggleEditType()"><option value="tow" '+((v.record_type||'tow')==='tow'?'selected':'')+'>Tow / Impound</option><option value="accident_tow" '+(v.record_type==='accident_tow'?'selected':'')+'>Accident / Tow-In</option><option value="storage_only" '+(v.record_type==='storage_only'?'selected':'')+'>Storage Only</option><option value="lien_foreclosure" '+(v.record_type==='lien_foreclosure'?'selected':'')+'>Lien Foreclosure</option><option value="company_owned" '+(owned?'selected':'')+'>Company Owned</option></select></div>'+ 
   '<div class="card"><div class="small muted">VEHICLE INFORMATION</div><div class="row"><input id="editYear" class="input" inputmode="numeric" placeholder="Year" value="'+esc(v.year||'')+'"><input id="editColor" class="input" placeholder="Color" value="'+esc(v.color||'')+'"></div><input id="editMake" class="input" placeholder="Make" value="'+esc(v.make||'')+'"><input id="editModel" class="input" placeholder="Model" value="'+esc(v.model||'')+'"><div class="row"><input id="editPlate" class="input" placeholder="Plate" value="'+esc(v.plate||'')+'" oninput="this.value=this.value.toUpperCase()"><input id="editState" class="input" placeholder="State" maxlength="2" value="'+esc(v.plate_state||'OR')+'" oninput="this.value=this.value.toUpperCase()"></div><input id="editVin" class="input" placeholder="VIN" value="'+esc(v.vin||'')+'" oninput="this.value=this.value.toUpperCase()"><div class="row"><input id="editOdometer" class="input" inputmode="numeric" placeholder="Odometer" value="'+esc(v.odometer??'')+'"><select id="editKeys" class="input"><option value="unknown" '+(!v.keys_status||v.keys_status==='unknown'?'selected':'')+'>Keys Unknown</option><option value="received" '+(v.keys_status==='received'?'selected':'')+'>Keys Received</option><option value="no_keys" '+(v.keys_status==='no_keys'?'selected':'')+'>No Keys</option></select></div></div>'+ 
   '<div id="editTowSection"><div class="card"><div class="small muted">TOW DETAILS</div><div class="small muted">TOW DATE / TIME</div><input id="editTowDate" class="input" type="datetime-local" value="'+esc(localDateTimeValue(v.tow_date))+'"><div class="row"><input id="editTowNumber" class="input" placeholder="Tow / case #" value="'+esc(v.tow_number||'')+'"><select id="editDriver" class="input"><option value="Damion" '+(v.driver_name==='Damion'?'selected':'')+'>Damion</option><option value="Mike" '+(v.driver_name==='Mike'?'selected':'')+'>Mike</option></select></div><select id="editAgency" class="input"><option value="">Agency (optional)</option><option value="RPD">RPD</option><option value="DCSO">DCSO</option><option value="ODOT">ODOT</option><option value="OSP">OSP</option><option value="PRIVATE">PRIVATE</option></select><select id="editImpoundType" class="input"><option value="" '+(!v.impound_type?'selected':'')+'>Reason not specified</option><option value="police_impound" '+(v.impound_type==='police_impound'?'selected':'')+'>Police Impound</option><option value="dui_arrest" '+(v.impound_type==='dui_arrest'?'selected':'')+'>DUI / Arrest</option><option value="suspended_no_license" '+(v.impound_type==='suspended_no_license'?'selected':'')+'>Suspended / No License</option><option value="no_insurance" '+(v.impound_type==='no_insurance'?'selected':'')+'>No Insurance</option><option value="traffic_safety_violation" '+(v.impound_type==='traffic_safety_violation'?'selected':'')+'>Traffic / Safety Violation</option><option value="motor_vehicle_accident" '+(v.impound_type==='motor_vehicle_accident'?'selected':'')+'>Motor Vehicle Accident (MVA)</option><option value="preference_motor_vehicle_accident" '+(v.impound_type==='preference_motor_vehicle_accident'?'selected':'')+'>Preference MVA</option><option value="private_property_impound" '+(v.impound_type==='private_property_impound'?'selected':'')+'>Private Property / Trespass</option><option value="private_party_impound" '+(v.impound_type==='private_party_impound'?'selected':'')+'>Private Party Impound</option><option value="owner_request" '+(v.impound_type==='owner_request'?'selected':'')+'>Owner Request</option><option value="abandoned_vehicle" '+(v.impound_type==='abandoned_vehicle'?'selected':'')+'>Abandoned Vehicle</option><option value="stolen_recovered" '+(v.impound_type==='stolen_recovered'?'selected':'')+'>Stolen / Recovered Vehicle</option><option value="disabled_breakdown" '+(v.impound_type==='disabled_breakdown'?'selected':'')+'>Disabled / Breakdown</option><option value="parking_violation" '+(v.impound_type==='parking_violation'?'selected':'')+'>Parking Violation</option><option value="evidence_investigation" '+(v.impound_type==='evidence_investigation'?'selected':'')+'>Evidence / Investigation</option><option value="road_hazard_obstruction" '+(v.impound_type==='road_hazard_obstruction'?'selected':'')+'>Road Hazard / Obstruction</option><option value="repossession" '+(v.impound_type==='repossession'?'selected':'')+'>Repossession</option><option value="other" '+(v.impound_type==='other'?'selected':'')+'>Other</option></select><input id="editPickup" class="input" value="'+esc(v.yard_location||'')+'" placeholder="Picked up from"><select id="editHoldType" class="input"><option value="none" '+(!v.hold_type||v.hold_type==='none'?'selected':'')+'>No Hold</option><option value="police_hold" '+(v.hold_type==='police_hold'?'selected':'')+'>Police Hold</option><option value="insurance_hold" '+(v.hold_type==='insurance_hold'?'selected':'')+'>Insurance Hold</option><option value="owner_hold" '+(v.hold_type==='owner_hold'?'selected':'')+'>Owner Hold</option><option value="other" '+(v.hold_type==='other'?'selected':'')+'>Other Hold</option></select><textarea id="editHoldNotes" class="input" rows="2" placeholder="Hold notes">'+esc(v.hold_notes||'')+'</textarea></div>'+ 
   '<div class="card"><div class="small muted">EQUIPMENT & BILLING</div><select id="editEquipmentType" class="input"><option value="">Equipment not specified</option><option value="wheel_lift" '+(v.equipment_type==='wheel_lift'?'selected':'')+'>Wheel Lift</option><option value="wrecker" '+(v.equipment_type==='wrecker'?'selected':'')+'>Wrecker</option><option value="medium_duty" '+(v.equipment_type==='medium_duty'?'selected':'')+'>Medium Duty</option><option value="flat_bed" '+(v.equipment_type==='flat_bed'?'selected':'')+'>Flat Bed</option></select><div class="toggle-grid"><label class="toggle"><input id="editUsedDollies" type="checkbox" '+(v.used_dollies?'checked':'')+'> Dollies</label><label class="toggle"><input id="editRecoveryPerformed" type="checkbox" '+(v.recovery_performed?'checked':'')+'> Recovery</label><label class="toggle"><input id="editWinchingPerformed" type="checkbox" '+(v.winching_performed?'checked':'')+'> Winching</label><label class="toggle"><input id="editCleanupPerformed" type="checkbox" '+(v.cleanup_performed?'checked':'')+'> Cleanup</label><label class="toggle"><input id="editHazmatCleanup" type="checkbox" '+(v.hazmat_cleanup?'checked':'')+'> Hazmat / absorbent</label><label class="toggle"><input id="editExtraLabor" type="checkbox" '+(v.extra_labor?'checked':'')+'> Extra labor</label><label class="toggle"><input id="editAfterHours" type="checkbox" '+(v.after_hours?'checked':'')+'> After hours</label></div><div class="row"><input id="editRecoveryMinutes" class="input" inputmode="numeric" placeholder="Recovery minutes" value="'+esc(v.recovery_minutes??'')+'"><input id="editExtraLaborMinutes" class="input" inputmode="numeric" placeholder="Extra labor minutes" value="'+esc(v.extra_labor_minutes??'')+'"></div><div class="row"><input id="editSceneWaitMinutes" class="input" inputmode="numeric" placeholder="Scene wait minutes" value="'+esc(v.scene_wait_minutes??'')+'"><input id="editBillableMiles" class="input" inputmode="decimal" placeholder="Billable miles" value="'+esc(v.billable_miles??'')+'"></div><textarea id="editOtherBillableWork" class="input" rows="2" placeholder="Other billable work">'+esc(v.other_billable_work||'')+'</textarea><textarea id="editBillingNotes" class="input" rows="2" placeholder="Billing notes">'+esc(v.billing_notes||'')+'</textarea></div></div>'+ 
@@ -841,17 +877,17 @@ async function saveVehicleEdits(){
     const vinValue=val('editVin').toUpperCase();
     if(handleDuplicateBeforeSave(vinValue,val('editPlate'),val('editState'),selected.id))return;
     let tow_date=selected.tow_date; const towDateValue=val('editTowDate'); if(towDateValue){const parsed=new Date(towDateValue);if(Number.isNaN(parsed.getTime()))throw new Error('Tow date/time is invalid.');tow_date=parsed.toISOString();}
-    let agency_id=null; if(record_type==='tow')agency_id=await resolveAgency(val('editAgency'));
+    let agency_id=null; if(record_type!=='company_owned')agency_id=await resolveAgency(val('editAgency'));
     const num=id=>val(id)?Number(val(id)):null;
     const body={record_type,year:num('editYear'),make:val('editMake')||null,model:val('editModel')||null,color:val('editColor')||null,plate:val('editPlate').toUpperCase()||null,plate_state:val('editState').toUpperCase()||null,vin:vinValue||null,odometer:num('editOdometer'),keys_status:val('editKeys')||'unknown',tow_date,condition_notes:val('editCondition')||null,property_notes:val('editProperty')||null,notes:val('editNotes')||null};
-    if(record_type==='tow')Object.assign(body,{agency_id,impound_type:val('editImpoundType')||null,yard_location:val('editPickup')||null,tow_number:val('editTowNumber').toUpperCase()||null,driver_name:val('editDriver')||null,hold_type:val('editHoldType')||'none',hold_notes:val('editHoldNotes')||null,status:val('editStatus')||selected.status,owned_disposition:null,asking_price:null,owned_notes:null,equipment_type:val('editEquipmentType')||null,used_dollies:checked('editUsedDollies'),recovery_performed:checked('editRecoveryPerformed')||!!val('editRecoveryMinutes'),recovery_minutes:num('editRecoveryMinutes'),winching_performed:checked('editWinchingPerformed'),cleanup_performed:checked('editCleanupPerformed')||checked('editHazmatCleanup'),hazmat_cleanup:checked('editHazmatCleanup'),extra_labor:checked('editExtraLabor')||!!val('editExtraLaborMinutes'),extra_labor_minutes:num('editExtraLaborMinutes'),after_hours:checked('editAfterHours'),scene_wait_minutes:num('editSceneWaitMinutes'),billable_miles:num('editBillableMiles'),other_billable_work:val('editOtherBillableWork')||null,billing_notes:val('editBillingNotes')||null});
+    if(record_type!=='company_owned')Object.assign(body,{agency_id,impound_type:val('editImpoundType')||null,yard_location:val('editPickup')||null,tow_number:val('editTowNumber').toUpperCase()||null,driver_name:val('editDriver')||null,hold_type:val('editHoldType')||'none',hold_notes:val('editHoldNotes')||null,status:val('editStatus')||selected.status,owned_disposition:null,asking_price:null,owned_notes:null,equipment_type:val('editEquipmentType')||null,used_dollies:checked('editUsedDollies'),recovery_performed:checked('editRecoveryPerformed')||!!val('editRecoveryMinutes'),recovery_minutes:num('editRecoveryMinutes'),winching_performed:checked('editWinchingPerformed'),cleanup_performed:checked('editCleanupPerformed')||checked('editHazmatCleanup'),hazmat_cleanup:checked('editHazmatCleanup'),extra_labor:checked('editExtraLabor')||!!val('editExtraLaborMinutes'),extra_labor_minutes:num('editExtraLaborMinutes'),after_hours:checked('editAfterHours'),scene_wait_minutes:num('editSceneWaitMinutes'),billable_miles:num('editBillableMiles'),other_billable_work:val('editOtherBillableWork')||null,billing_notes:val('editBillingNotes')||null});
     else {
       const disp=val('editOwnedDisposition')||null;
       Object.assign(body,{agency_id:null,impound_type:null,yard_location:null,tow_number:null,driver_name:null,hold_type:'none',hold_notes:null,status:'other',owned_disposition:disp,asking_price:num('editAskingPrice'),disposition_amount:num('editDispositionAmount'),owned_notes:val('editOwnedNotes')||null,equipment_type:null,used_dollies:false,recovery_performed:false,recovery_minutes:null,winching_performed:false,cleanup_performed:false,hazmat_cleanup:false,extra_labor:false,extra_labor_minutes:null,after_hours:false,scene_wait_minutes:null,billable_miles:null,other_billable_work:null,billing_notes:null});
       if((disp==='sold'||disp==='scrapped')&&!selected.disposition_completed_at)body.disposition_completed_at=new Date().toISOString();
       if(!disp||disp==='for_sale'||disp==='scrap')body.disposition_completed_at=null;
     }
-    if(selected.release_at&&record_type==='tow'){body.released_to=val('editReleasedTo')||null;body.release_authorized_by=val('editReleaseAuthorized')||null;body.release_id_checked=checked('editReleaseIdChecked');body.release_notes=val('editReleaseNotes')||null;}
+    if(selected.release_at&&record_type!=='company_owned'){body.released_to=val('editReleasedTo')||null;body.release_authorized_by=val('editReleaseAuthorized')||null;body.release_id_checked=checked('editReleaseIdChecked');body.release_notes=val('editReleaseNotes')||null;}
     await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});
     await load(); detail(id); alert('Vehicle updated.');
   }catch(e){alert('Vehicle update failed: '+e.message)}
@@ -1069,7 +1105,7 @@ async function printTowSheet(){
       ['Tow Date / Time',new Date(v.tow_date).toLocaleString()],['Tow / Case #',v.tow_number||'—'],['Driver',v.driver_name||'—'],
       ['Reason',impoundLabel(v.impound_type)],['Plate',(v.plate||'—')+' '+(v.plate_state||'')],['VIN',v.vin||'—'],
       ['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],['Storage Days',storageDayText(v)],['Picked Up From',v.yard_location||'—'],
-      ['Hold',holdLabel(v.hold_type)],['Status',v.status||'—']
+      ['Hold',holdLabel(v.hold_type)],['Status',statusLabel(v.status)]
     ];
     const extra=owned?[
       ['Owned Vehicle Notes',v.owned_notes||'—'],['Condition / Damage',v.condition_notes||'—'],['Staff Notes',v.notes||'—']
@@ -1195,7 +1231,7 @@ async function updateVehicleStatus(){
     const body={status:newStatus};
     if(newStatus==='released'&&!selected.archived_at){body.archived_at=new Date().toISOString();body.archived_by=user.id;}
     await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)});
-    await load(); detail(id); alert(newStatus==='released'?'Vehicle status updated and moved to Archive.':'Vehicle status updated.');
+    await load(); detail(id); alert(newStatus==='released'?'Vehicle status updated to Released and moved to Archive.':'Vehicle status updated to '+statusLabel(newStatus)+'.');
   }catch(e){alert('Status update failed: '+e.message)}
 }
 async function undoRelease(){
