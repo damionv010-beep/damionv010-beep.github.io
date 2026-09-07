@@ -90,6 +90,7 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 const BASE='https://ckonxzprnxqlefxscudt.supabase.co';
 const KEY='sb_publishable_fQ-Cv2dhMlib6_16oh-WiQ_Ku96PhPp';
 const SITE='https://damionv010-beep.github.io/';
+const PUBLIC_TAG='https://ckonxzprnxqlefxscudt.supabase.co/functions/v1/towtag-public-tag';
 const INVOICE_BG='';
 let session=null,user=null,staffMember=null,vehicles=[],photoRows=[],documentRows=[],agencyRows=[],billingProfiles=[],selected=null,movePhotoId=null;
 const app=document.getElementById('app');
@@ -831,7 +832,7 @@ function detail(id){
   selected=vehicles.find(v=>v.id===id); const v=selected; if(!v)return;
   const owned=v.record_type==='company_owned';
   const qr=BASE+'/functions/v1/towtag-qr?token='+encodeURIComponent(v.qr_token);
-  const publicUrl=SITE+'?tag='+encodeURIComponent(v.qr_token);
+  const publicUrl=PUBLIC_TAG+'?token='+encodeURIComponent(v.qr_token);
   const badge=owned?ownedLabel(v.owned_disposition):statusLabel(v.status);
   const releaseCard=(!owned&&!v.deleted_at)?((v.release_at||v.status==='released')?
     '<div class="card" id="releaseCard"><div class="small muted">RELEASE RECORD</div>'+(v.release_at?'<div class="kv" style="margin-top:10px"><div><span>Released</span>'+esc(new Date(v.release_at).toLocaleString())+'</div><div><span>Released to</span>'+esc(v.released_to||'—')+'</div><div><span>ID checked</span>'+(v.release_id_checked?'Yes':'No')+'</div><div><span>Authorized by</span>'+esc(v.release_authorized_by||'—')+'</div><div style="grid-column:1/-1"><span>Release notes</span>'+esc(v.release_notes||'—')+'</div></div>':'<div class="notice">This vehicle is marked Released.</div>')+(v.release_signature_data?'<div class="small muted" style="margin-top:12px">RELEASE SIGNATURE</div><img class="signature-preview" src="'+esc(v.release_signature_data)+'">':'')+'<div class="quick-actions"><button class="btn" onclick="printReleaseReceipt()">Print Release Receipt</button><button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button></div></div>':
@@ -1315,7 +1316,7 @@ async function uploadPhotos(fileList){
   }catch(e){alert('Photo upload failed: '+e.message)}
 }
 async function shareTag(){
-  const url=SITE+'?tag='+encodeURIComponent(selected.qr_token);
+  const url=PUBLIC_TAG+'?token='+encodeURIComponent(selected.qr_token);
   if(navigator.share)await navigator.share({title:'TowTag '+title(selected),url}); else{await navigator.clipboard.writeText(url);alert('TowTag link copied.')}
 }
 function rateInput(id,label,value){return '<label class="small muted">'+label+'</label><input id="'+id+'" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(value??'')+'">'}
@@ -1417,22 +1418,10 @@ function logout(){staffMember=null;saveSession(null);loginScreen()}
 
 
 async function publicView(token){
-  app.innerHTML=BRAND_HTML+'<div class="card muted">Loading vehicle record…</div>';
-  try{
-    const r=await fetch(BASE+'/functions/v1/towtag-public-vehicle?token='+encodeURIComponent(token),{headers:{apikey:KEY}});
-    const d=await r.json(); if(!r.ok)throw new Error(d.error||'TowTag not found');
-    const veh=[d.vehicle?.year,d.vehicle?.make,d.vehicle?.model].filter(Boolean).join(' ')||'Vehicle';
-    const photos=(d.photos||[]).map(p=>'<figure><img src="'+esc(p.url)+'"><figcaption>'+esc(p.caption||'Vehicle photo')+'</figcaption></figure>').join('');
-    const owned=d.recordType==='company_owned';
-    const badge=owned?ownedLabel(d.ownedDisposition):(d.status||'');
-    const info=owned?'<div class="kv" style="margin-top:14px"><div><span>Record type</span>Company Owned</div><div><span>Disposition</span>'+esc(ownedLabel(d.ownedDisposition))+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Added</span>'+esc(new Date(d.towDate).toLocaleString())+'</div></div>':
-      '<div class="kv" style="margin-top:14px"><div><span>Brought in</span>'+esc(new Date(d.towDate).toLocaleString())+'</div><div><span>Agency</span>'+esc(d.agency||'—')+'</div><div><span>Plate</span>'+esc(d.plate?.number||'—')+' '+esc(d.plate?.state||'')+'</div><div><span>Reason</span>'+esc(impoundLabel(d.impoundType))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(d.pickupLocation||d.yardLocation||'—')+'</div></div>';
-    app.innerHTML=BRAND_HTML+'<div class="card"><div class="small muted">VEHICLE RECORD</div><div class="h1">'+esc(veh)+
-    '</div><div class="muted">'+esc(d.vehicle?.color||'Color not listed')+'</div><div style="margin-top:12px"><span class="pill">'+esc(badge)+'</span></div>'+info+'</div>'+ (photos?'<div class="card"><div class="small muted">PHOTOS</div><div class="photos" style="margin-top:12px">'+photos+'</div></div>':'');
-  }catch(e){
-    app.innerHTML=BRAND_HTML+'<div class="error">'+esc(e.message)+'</div>';
-  }
+  if(!token)return;
+  location.replace(PUBLIC_TAG+'?token='+encodeURIComponent(token));
 }
+
 
 
 // --- TowTag simplified agency + generic invoice overrides ---
@@ -1444,12 +1433,19 @@ agencyManagementScreen=function(){
 
 billingReleaseWarnings=function(){return [];};
 
+function latestSavedStorageRate(){
+  const rated=vehicles
+    .filter(x=>x?.invoice_data&&(x.invoice_data.generic_storage_daily_rate||x.invoice_data.storage_rate))
+    .sort((a,b)=>new Date(b.invoice_updated_at||b.tow_date||0)-new Date(a.invoice_updated_at||a.tow_date||0));
+  const rate=rated.length?(rated[0].invoice_data.generic_storage_daily_rate||rated[0].invoice_data.storage_rate):'';
+  return rate||localStorage.getItem('towtag_storage_daily_rate')||'';
+}
 function genericInvoiceSaved(v){
   const d=invoiceStored(v);
-  let lines=Array.isArray(d.generic_line_items)?d.generic_line_items.filter(x=>x&&((x.description||'').trim()||String(x.amount??'').trim())):[];
+  let lines=Array.isArray(d.generic_line_items)?d.generic_line_items.filter(x=>x&&x.kind!=='storage_auto'&&((x.description||'').trim()||String(x.amount??'').trim())):[];
   if(!lines.length){
     const legacy=[
-      ['Tow / service',d.towing_charge],['Mileage',d.mileage_charge],['Labor',d.labor_charge],['Additional person',d.extra_person_charge],['Special equipment',d.special_equipment_charge],['Storage',d.storage_charge]
+      ['Tow / service',d.towing_charge],['Mileage',d.mileage_charge],['Labor',d.labor_charge],['Additional person',d.extra_person_charge],['Special equipment',d.special_equipment_charge]
     ];
     lines=legacy.filter(x=>Number(String(x[1]??'').replace(/[$,]/g,''))>0).map(x=>({description:x[0],amount:String(x[1])}));
   }
@@ -1461,6 +1457,7 @@ function genericInvoiceSaved(v){
     customer_address:d.generic_customer_address||[d.address,d.city,d.state,d.zip].filter(Boolean).join(', '),
     notes:d.generic_notes||d.notes||v.billing_notes||'',
     tax:d.generic_tax??d.tax??'',
+    storage_rate:d.generic_storage_daily_rate??d.storage_rate??latestSavedStorageRate(),
     lines
   };
 }
@@ -1473,14 +1470,28 @@ function addGenericInvoiceLine(item={}){
   box.insertAdjacentHTML('beforeend',genericInvoiceLineHtml(item));
   recalcGenericInvoice();
 }
+function currentStorageCalc(){
+  const days=selected?storageDayCount(selected):0;
+  const rate=genericMoney(val('genericStorageRate'));
+  return {days,rate,amount:days*rate};
+}
 function recalcGenericInvoice(){
-  const subtotal=[...document.querySelectorAll('.generic-amount')].reduce((sum,x)=>sum+genericMoney(x.value),0);
+  const manual=[...document.querySelectorAll('.generic-amount')].reduce((sum,x)=>sum+genericMoney(x.value),0);
+  const storage=currentStorageCalc();
+  const subtotal=manual+storage.amount;
   const tax=genericMoney(val('genericTax'));
+  if(el('genericStorageAmount'))el('genericStorageAmount').textContent=money(storage.amount);
+  if(el('genericStorageSummary'))el('genericStorageSummary').textContent=storage.days+' calendar day'+(storage.days===1?'':'s')+' × '+money(storage.rate)+'/day';
   if(el('genericSubtotal'))el('genericSubtotal').textContent=money(subtotal);
   if(el('genericTotal'))el('genericTotal').textContent=money(subtotal+tax);
 }
 function collectGenericInvoice(){
   const lines=[...document.querySelectorAll('.generic-invoice-line')].map(row=>({description:row.querySelector('.generic-desc')?.value?.trim()||'',amount:row.querySelector('.generic-amount')?.value?.trim()||''})).filter(x=>x.description||x.amount);
+  const storage=currentStorageCalc();
+  if(storage.days>0&&storage.rate>0){
+    lines.push({kind:'storage_auto',description:'Storage — '+storage.days+' calendar day'+(storage.days===1?'':'s')+' @ '+money(storage.rate)+'/day',amount:storage.amount.toFixed(2)});
+    try{localStorage.setItem('towtag_storage_daily_rate',storage.rate.toFixed(2))}catch{}
+  }
   const subtotal=lines.reduce((sum,x)=>sum+genericMoney(x.amount),0),tax=genericMoney(val('genericTax'));
   return {
     generic_invoice:true,
@@ -1489,6 +1500,11 @@ function collectGenericInvoice(){
     generic_customer_phone:val('genericCustomerPhone')||'',
     generic_customer_address:val('genericCustomerAddress')||'',
     generic_line_items:lines,
+    generic_storage_days:storage.days,
+    generic_storage_daily_rate:storage.rate.toFixed(2),
+    generic_storage_amount:storage.amount.toFixed(2),
+    storage_rate:storage.rate.toFixed(2),
+    storage_charge:storage.amount.toFixed(2),
     generic_notes:val('genericNotes')||'',
     generic_tax:tax.toFixed(2),
     subtotal:subtotal.toFixed(2),
@@ -1498,16 +1514,17 @@ function collectGenericInvoice(){
 }
 invoiceForm=async function(){
   if(!selected||selected.record_type==='company_owned')return;
-  const v=selected,d=genericInvoiceSaved(v);
+  const v=selected,d=genericInvoiceSaved(v),storageDays=storageDayCount(v);
   let invoiceNumber=v.invoice_number||'';
   if(!invoiceNumber){try{invoiceNumber=await ensureInvoiceNumber(v)}catch(e){console.warn('Invoice number unavailable',e)}}
   const vehicle=[v.year,v.make,v.model].filter(Boolean).join(' ')||'Vehicle';
-  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Generic Invoice</div><p class="muted">Simple manual invoice. Nothing is tied to an agency rate.</p>'+
-    '<div class="card"><div class="small muted">INVOICE</div><div class="row"><input id="genericInvoiceNumber" class="input" placeholder="Invoice # (optional)" value="'+esc(invoiceNumber)+'"><input id="genericInvoiceDate" class="input" type="date" value="'+esc(d.invoice_date)+'"></div></div>'+
-    '<div class="card"><div class="small muted">BILL TO</div><input id="genericCustomerName" class="input" placeholder="Customer / business name" value="'+esc(d.customer_name)+'"><input id="genericCustomerPhone" class="input" placeholder="Phone" value="'+esc(d.customer_phone)+'"><textarea id="genericCustomerAddress" class="input" rows="2" placeholder="Address">'+esc(d.customer_address)+'</textarea></div>'+
-    '<div class="card"><div class="small muted">VEHICLE / TOW</div><div class="kv" style="margin-top:10px"><div><span>Vehicle</span>'+esc(vehicle)+'</div><div><span>Plate</span>'+esc(v.plate||'—')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div></div></div>'+
-    '<div class="card"><div class="small muted">LINE ITEMS</div><div id="genericInvoiceLines" class="generic-invoice-lines">'+d.lines.map(genericInvoiceLineHtml).join('')+'</div><button type="button" class="btn secondary" onclick="addGenericInvoiceLine()">+ Add Line Item</button></div>'+
-    '<div class="card"><div class="row"><div><label class="small muted">TAX / OTHER</label><input id="genericTax" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.tax)+'" oninput="recalcGenericInvoice()"></div><div><div class="generic-total-row"><span>Subtotal</span><span id="genericSubtotal">$0.00</span></div><div class="generic-total-row total"><span>Total</span><span id="genericTotal">$0.00</span></div></div></div><textarea id="genericNotes" class="input" rows="4" placeholder="Invoice notes">'+esc(d.notes)+'</textarea></div>'+
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Generic Invoice</div><p class="muted">TowTag automatically calculates storage days. Enter the daily storage rate and it is added to the invoice total.</p>'+ 
+    '<div class="card"><div class="small muted">INVOICE</div><div class="row"><input id="genericInvoiceNumber" class="input" placeholder="Invoice # (optional)" value="'+esc(invoiceNumber)+'"><input id="genericInvoiceDate" class="input" type="date" value="'+esc(d.invoice_date)+'"></div></div>'+ 
+    '<div class="card"><div class="small muted">BILL TO</div><input id="genericCustomerName" class="input" placeholder="Customer / business name" value="'+esc(d.customer_name)+'"><input id="genericCustomerPhone" class="input" placeholder="Phone" value="'+esc(d.customer_phone)+'"><textarea id="genericCustomerAddress" class="input" rows="2" placeholder="Address">'+esc(d.customer_address)+'</textarea></div>'+ 
+    '<div class="card"><div class="small muted">VEHICLE / TOW</div><div class="kv" style="margin-top:10px"><div><span>Vehicle</span>'+esc(vehicle)+'</div><div><span>Plate</span>'+esc(v.plate||'—')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div></div></div>'+ 
+    '<div class="card"><div class="small muted">STORAGE</div><div class="storage-clock"><div><strong>'+storageDays+'</strong><span>calendar storage day'+(storageDays===1?'':'s')+'</span></div><div style="text-align:right"><strong id="genericStorageAmount">$0.00</strong><span>storage charge</span></div></div><label class="small muted">STORAGE RATE / DAY</label><input id="genericStorageRate" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.storage_rate)+'" oninput="recalcGenericInvoice()"><div id="genericStorageSummary" class="small muted"></div></div>'+ 
+    '<div class="card"><div class="small muted">OTHER LINE ITEMS</div><div id="genericInvoiceLines" class="generic-invoice-lines">'+d.lines.map(genericInvoiceLineHtml).join('')+'</div><button type="button" class="btn secondary" onclick="addGenericInvoiceLine()">+ Add Line Item</button></div>'+ 
+    '<div class="card"><div class="row"><div><label class="small muted">TAX / OTHER</label><input id="genericTax" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.tax)+'" oninput="recalcGenericInvoice()"></div><div><div class="generic-total-row"><span>Subtotal</span><span id="genericSubtotal">$0.00</span></div><div class="generic-total-row total"><span>Total</span><span id="genericTotal">$0.00</span></div></div></div><textarea id="genericNotes" class="input" rows="4" placeholder="Invoice notes">'+esc(d.notes)+'</textarea></div>'+ 
     '<div class="invoice-actions"><button class="btn" onclick="saveInvoice()">Save Invoice</button><button class="btn secondary" onclick="printInvoiceFromForm()">Print / Save PDF</button></div><button class="btn secondary" onclick="detail(\''+v.id+'\')">Back to Vehicle</button>';
   setTimeout(recalcGenericInvoice,0);
 };
