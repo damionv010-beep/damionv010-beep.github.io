@@ -396,25 +396,10 @@ function standardPhotoProgress(v){
   const done=needed.filter(x=>have.has(x)).length;
   return {done,total:needed.length};
 }
-function incompleteWarnings(v){
-  if(!v||v.deleted_at)return [];
-  const w=[];
-  if(!v.vin)w.push('VIN missing');
-  if(vehiclePhotoCount(v)===0)w.push('No photos');
-  if((v.record_type||'tow')==='tow'){
-    if(!v.impound_type)w.push('Tow reason missing');
-    if(!v.driver_name)w.push('Driver missing');
-    if(!v.equipment_type)w.push('Equipment missing');
-  }
-  return w;
-}
-function attentionCard(v){
-  const warnings=incompleteWarnings(v),p=standardPhotoProgress(v);
-  if(!warnings.length&&p.done>=p.total)return '';
-  return '<div class="card attention"><div class="small muted">RECORD CHECK</div>'+
-    (warnings.length?'<div style="margin-top:7px"><strong>'+warnings.length+' item'+(warnings.length===1?'':'s')+' need attention</strong><div class="small" style="margin-top:5px">'+warnings.map(esc).join(' · ')+'</div></div>':'')+
-    '<div class="small muted" style="margin-top:9px">Standard intake photos: '+p.done+' / '+p.total+'</div></div>';
-}
+function incompleteWarnings(v){return [];}
+
+function attentionCard(v){return '';}
+
 function findVehicleDuplicate(vin,plate,state,excludeId=null){
   vin=String(vin||'').trim().toUpperCase(); plate=String(plate||'').trim().toUpperCase(); state=String(state||'').trim().toUpperCase();
   return vehicles.find(v=>{
@@ -630,7 +615,7 @@ function home(){
   const scrapCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap').length;
   const adminButton=staffMember?.role==='admin'?'<button class="link" onclick="adminStaffScreen()">Staff</button>':'';
   app.innerHTML='<div class="top"><div>'+BRAND_HTML+'<div class="muted small">'+active.length+' active · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap · '+archivedCount+' archived · '+trashCount+' trash'+(queuedCount?' · '+queuedCount+' waiting to sync':'')+'</div></div><div style="display:flex;gap:12px">'+adminButton+'<button class="link" onclick="logout()">Sign Out</button></div></div>'+
-  '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
+  '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="yardReport()">Yard Report</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
   (queuedCount?'<button class="btn secondary" onclick="syncOfflineIntakes()">Sync '+queuedCount+' Saved Intake'+(queuedCount===1?'':'s')+'</button>':'')+
   '<div class="choice-grid filters" style="grid-template-columns:repeat(6,1fr);margin-top:12px"><button class="choice active" data-filter onclick="setHomeFilter(\'all\',this)">Active</button><button class="choice" data-filter onclick="setHomeFilter(\'tow\',this)">Tows</button><button class="choice" data-filter onclick="setHomeFilter(\'sale\',this)">For Sale</button><button class="choice" data-filter onclick="setHomeFilter(\'scrap\',this)">Scrap</button><button class="choice" data-filter onclick="setHomeFilter(\'archive\',this)">Archive</button><button class="choice" data-filter onclick="setHomeFilter(\'trash\',this)">Trash</button></div>'+
   '<input id="search" class="input" type="search" autocomplete="off" placeholder="Search everything — plate, VIN, case #, invoice, owner…" oninput="render(this.value)"><div id="list"></div>';
@@ -812,6 +797,8 @@ function quickActionsCard(v,owned){
     '<button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button>'+
     '<button class="btn secondary" onclick="scrollVehicleSection(\'vehicleMediaCard\')">Photos / QR</button>';
   if(!owned)buttons+='<button class="btn secondary" onclick="invoiceForm()">Invoice</button>';
+  if(v.record_type==='lien_foreclosure')buttons+='<button class="btn secondary" onclick="lienTrackerScreen()">Lien Tracker</button>';
+  if(!owned&&savedInvoicePayments(v).length)buttons+='<button class="btn secondary" onclick="printInvoiceReceipt()">Payment Receipt</button>';
   if(!owned&&v.release_at)buttons+='<button class="btn" onclick="printReleaseReceipt()">Release Receipt</button>';
   else if(!owned)buttons+='<button class="btn" onclick="scrollVehicleSection(\'releaseCard\')">Release Vehicle</button>';
   return '<div class="card"><div class="small muted">QUICK ACTIONS</div><div class="quick-actions">'+buttons+'</div></div>';
@@ -841,7 +828,7 @@ function detail(id){
   '<div class="card kv"><div><span>Added</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
   const statusCard=(!owned&&!v.deleted_at)?'<div class="card"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">This is an older record that was previously marked Auction. Auction is no longer available for new records.</div>':'')+'<select id="vehicleStatus" class="input">'+statusOptions(v.status)+'</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>':'';
   const archiveCard=v.deleted_at?'<div class="card"><div class="small muted">TRASH</div><div class="error">Moved to Trash '+esc(new Date(v.deleted_at).toLocaleString())+'. The record is recoverable until you permanently delete it.</div><button class="btn" onclick="restoreTrashedVehicle()">Restore Vehicle</button></div>':(v.archived_at?'<div class="card"><div class="small muted">ARCHIVED</div><div class="notice">This vehicle left the active yard list on '+esc(new Date(v.archived_at).toLocaleString())+'. All photos, invoices, billing and TowTag data are still saved.</div>'+((v.release_at||v.status==='released')?'<button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button>':'<button class="btn secondary" onclick="restoreVehicle()">Restore to Active Vehicles</button>')+'</div>':'<div class="card"><div class="small muted">ARCHIVE</div><p class="muted">Use this when the vehicle has left the yard. Nothing is deleted.</p><button class="btn secondary" onclick="archiveVehicle()">Archive Vehicle</button></div>');
-  app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill '+(v.deleted_at?'trash-pill':'')+'">'+esc(v.deleted_at?'Trash':badge)+'</span></div>'+quickActionsCard(v,owned)+towInfo+attentionCard(v)+agencyCard(v)+ownedCard(v)+billingCard(v)+
+  app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill '+(v.deleted_at?'trash-pill':'')+'">'+esc(v.deleted_at?'Trash':badge)+'</span></div>'+quickActionsCard(v,owned)+towInfo+lienTrackerCard(v)+attentionCard(v)+agencyCard(v)+ownedCard(v)+billingCard(v)+
   '<div class="row">'+(!v.deleted_at?'<button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button>':'')+'<button class="btn secondary" onclick="printTowSheet()">Print Tow Sheet</button></div>'+(!owned&&!v.deleted_at?'<button class="btn" onclick="invoiceForm()">'+(v.invoice_number?'Invoice # '+esc(v.invoice_number):'Create Invoice')+'</button>':'')+statusCard+releaseCard+
   documentsCard(v)+
   '<div class="card" id="vehicleMediaCard" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div><input id="cameraPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotos(this.files)"><input id="libraryPhoto" type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this.files)">'+
@@ -1442,7 +1429,9 @@ function latestSavedStorageRate(){
 }
 function genericInvoiceSaved(v){
   const d=invoiceStored(v);
-  let lines=Array.isArray(d.generic_line_items)?d.generic_line_items.filter(x=>x&&x.kind!=='storage_auto'&&((x.description||'').trim()||String(x.amount??'').trim())):[];
+  const all=Array.isArray(d.generic_line_items)?d.generic_line_items:[];
+  let lines=all.filter(x=>x&&x.kind!=='storage_auto'&&x.kind!=='deduction'&&((x.description||'').trim()||String(x.amount??'').trim()));
+  let deductions=Array.isArray(d.generic_deductions)?d.generic_deductions.filter(x=>x&&((x.description||'').trim()||String(x.amount??'').trim())):all.filter(x=>x&&x.kind==='deduction').map(x=>({description:x.description||'',amount:Math.abs(genericMoney(x.amount)).toFixed(2)}));
   if(!lines.length){
     const legacy=[
       ['Tow / service',d.towing_charge],['Mileage',d.mileage_charge],['Labor',d.labor_charge],['Additional person',d.extra_person_charge],['Special equipment',d.special_equipment_charge]
@@ -1458,7 +1447,10 @@ function genericInvoiceSaved(v){
     notes:d.generic_notes||d.notes||v.billing_notes||'',
     tax:d.generic_tax??d.tax??'',
     storage_rate:d.generic_storage_daily_rate??d.storage_rate??latestSavedStorageRate(),
-    lines
+    waived_days:Math.max(0,Number(d.generic_storage_waived_days)||0),
+    payments:Array.isArray(d.generic_payments)?d.generic_payments:[],
+    lines,
+    deductions
   };
 }
 function genericMoney(v){const n=Number(String(v??'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0;}
@@ -1470,29 +1462,52 @@ function addGenericInvoiceLine(item={}){
   box.insertAdjacentHTML('beforeend',genericInvoiceLineHtml(item));
   recalcGenericInvoice();
 }
+function genericDeductionHtml(item={}){
+  const suggestions='list="towtagDeductionTypes"';
+  return '<div class="generic-invoice-line generic-deduction-line"><input class="input generic-deduction-desc" '+suggestions+' placeholder="Discount / credit description" value="'+esc(item.description||'')+'"><input class="input generic-deduction-amount" inputmode="decimal" placeholder="Amount" value="'+esc(item.amount??'')+'" oninput="recalcGenericInvoice()"><button type="button" class="remove-line" onclick="this.parentElement.remove();recalcGenericInvoice()">×</button></div>';
+}
+function addGenericDeduction(item={}){
+  const box=el('genericDeductions');if(!box)return;
+  box.insertAdjacentHTML('beforeend',genericDeductionHtml(item));
+  recalcGenericInvoice();
+}
 function currentStorageCalc(){
   const days=selected?storageDayCount(selected):0;
+  const rawWaived=Math.max(0,Math.floor(Number(val('genericWaivedStorageDays'))||0));
+  const waived=Math.min(days,rawWaived);
+  const billableDays=Math.max(0,days-waived);
   const rate=genericMoney(val('genericStorageRate'));
-  return {days,rate,amount:days*rate};
+  return {days,waived,billableDays,rate,amount:billableDays*rate};
 }
 function recalcGenericInvoice(){
   const manual=[...document.querySelectorAll('.generic-amount')].reduce((sum,x)=>sum+genericMoney(x.value),0);
+  const deductions=[...document.querySelectorAll('.generic-deduction-amount')].reduce((sum,x)=>sum+Math.abs(genericMoney(x.value)),0);
   const storage=currentStorageCalc();
-  const subtotal=manual+storage.amount;
+  const charges=manual+storage.amount;
+  const subtotal=Math.max(0,charges-deductions);
   const tax=genericMoney(val('genericTax'));
   if(el('genericStorageAmount'))el('genericStorageAmount').textContent=money(storage.amount);
-  if(el('genericStorageSummary'))el('genericStorageSummary').textContent=storage.days+' calendar day'+(storage.days===1?'':'s')+' × '+money(storage.rate)+'/day';
+  if(el('genericStorageSummary'))el('genericStorageSummary').textContent=storage.days+' calendar day'+(storage.days===1?'':'s')+' · '+storage.waived+' waived · '+storage.billableDays+' billable × '+money(storage.rate)+'/day';
+  if(el('genericStorageBillable'))el('genericStorageBillable').textContent=storage.billableDays;
+  if(el('genericChargesSubtotal'))el('genericChargesSubtotal').textContent=money(charges);
+  if(el('genericDeductionsTotal'))el('genericDeductionsTotal').textContent='−'+money(deductions);
   if(el('genericSubtotal'))el('genericSubtotal').textContent=money(subtotal);
-  if(el('genericTotal'))el('genericTotal').textContent=money(subtotal+tax);
+  if(el('genericTotal'))el('genericTotal').textContent=money(Math.max(0,subtotal+tax));
 }
 function collectGenericInvoice(){
-  const lines=[...document.querySelectorAll('.generic-invoice-line')].map(row=>({description:row.querySelector('.generic-desc')?.value?.trim()||'',amount:row.querySelector('.generic-amount')?.value?.trim()||''})).filter(x=>x.description||x.amount);
+  const chargeLines=[...document.querySelectorAll('#genericInvoiceLines .generic-invoice-line')].map(row=>({description:row.querySelector('.generic-desc')?.value?.trim()||'',amount:row.querySelector('.generic-amount')?.value?.trim()||''})).filter(x=>x.description||x.amount);
+  const deductions=[...document.querySelectorAll('#genericDeductions .generic-deduction-line')].map(row=>({description:row.querySelector('.generic-deduction-desc')?.value?.trim()||'Credit / Discount',amount:Math.abs(genericMoney(row.querySelector('.generic-deduction-amount')?.value)).toFixed(2)})).filter(x=>x.description||genericMoney(x.amount)>0);
+  const lines=[...chargeLines];
   const storage=currentStorageCalc();
   if(storage.days>0&&storage.rate>0){
-    lines.push({kind:'storage_auto',description:'Storage — '+storage.days+' calendar day'+(storage.days===1?'':'s')+' @ '+money(storage.rate)+'/day',amount:storage.amount.toFixed(2)});
+    const waiverText=storage.waived?' ('+storage.waived+' waived)':'';
+    lines.push({kind:'storage_auto',description:'Storage — '+storage.billableDays+' billable day'+(storage.billableDays===1?'':'s')+waiverText+' @ '+money(storage.rate)+'/day',amount:storage.amount.toFixed(2)});
     try{localStorage.setItem('towtag_storage_daily_rate',storage.rate.toFixed(2))}catch{}
   }
-  const subtotal=lines.reduce((sum,x)=>sum+genericMoney(x.amount),0),tax=genericMoney(val('genericTax'));
+  deductions.filter(x=>genericMoney(x.amount)>0).forEach(x=>lines.push({kind:'deduction',description:x.description||'Credit / Discount',amount:(-Math.abs(genericMoney(x.amount))).toFixed(2)}));
+  const charges=lines.filter(x=>x.kind!=='deduction').reduce((sum,x)=>sum+genericMoney(x.amount),0);
+  const deductionTotal=deductions.reduce((sum,x)=>sum+Math.abs(genericMoney(x.amount)),0);
+  const subtotal=Math.max(0,charges-deductionTotal),tax=genericMoney(val('genericTax')),total=Math.max(0,subtotal+tax);
   return {
     generic_invoice:true,
     generic_invoice_date:val('genericInvoiceDate')||'',
@@ -1500,7 +1515,12 @@ function collectGenericInvoice(){
     generic_customer_phone:val('genericCustomerPhone')||'',
     generic_customer_address:val('genericCustomerAddress')||'',
     generic_line_items:lines,
+    generic_deductions:deductions,
+    generic_deductions_total:deductionTotal.toFixed(2),
+    generic_charges_subtotal:charges.toFixed(2),
     generic_storage_days:storage.days,
+    generic_storage_waived_days:storage.waived,
+    generic_storage_billable_days:storage.billableDays,
     generic_storage_daily_rate:storage.rate.toFixed(2),
     generic_storage_amount:storage.amount.toFixed(2),
     storage_rate:storage.rate.toFixed(2),
@@ -1509,7 +1529,7 @@ function collectGenericInvoice(){
     generic_tax:tax.toFixed(2),
     subtotal:subtotal.toFixed(2),
     tax:tax.toFixed(2),
-    total:(subtotal+tax).toFixed(2)
+    total:total.toFixed(2)
   };
 }
 invoiceForm=async function(){
@@ -1522,9 +1542,11 @@ invoiceForm=async function(){
     '<div class="card"><div class="small muted">INVOICE</div><div class="row"><input id="genericInvoiceNumber" class="input" placeholder="Invoice # (optional)" value="'+esc(invoiceNumber)+'"><input id="genericInvoiceDate" class="input" type="date" value="'+esc(d.invoice_date)+'"></div></div>'+ 
     '<div class="card"><div class="small muted">BILL TO</div><input id="genericCustomerName" class="input" placeholder="Customer / business name" value="'+esc(d.customer_name)+'"><input id="genericCustomerPhone" class="input" placeholder="Phone" value="'+esc(d.customer_phone)+'"><textarea id="genericCustomerAddress" class="input" rows="2" placeholder="Address">'+esc(d.customer_address)+'</textarea></div>'+ 
     '<div class="card"><div class="small muted">VEHICLE / TOW</div><div class="kv" style="margin-top:10px"><div><span>Vehicle</span>'+esc(vehicle)+'</div><div><span>Plate</span>'+esc(v.plate||'—')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div></div></div>'+ 
-    '<div class="card"><div class="small muted">STORAGE</div><div class="storage-clock"><div><strong>'+storageDays+'</strong><span>calendar storage day'+(storageDays===1?'':'s')+'</span></div><div style="text-align:right"><strong id="genericStorageAmount">$0.00</strong><span>storage charge</span></div></div><label class="small muted">STORAGE RATE / DAY</label><input id="genericStorageRate" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.storage_rate)+'" oninput="recalcGenericInvoice()"><div id="genericStorageSummary" class="small muted"></div></div>'+ 
+    '<div class="card"><div class="small muted">STORAGE</div><div class="storage-clock"><div><strong>'+storageDays+'</strong><span>calendar storage day'+(storageDays===1?'':'s')+'</span></div><div style="text-align:right"><strong id="genericStorageAmount">$0.00</strong><span>storage charge</span></div></div><div class="row"><div><label class="small muted">STORAGE RATE / DAY</label><input id="genericStorageRate" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.storage_rate)+'" oninput="recalcGenericInvoice()"></div><div><label class="small muted">WAIVED STORAGE DAYS</label><input id="genericWaivedStorageDays" class="input" type="number" min="0" step="1" value="'+esc(d.waived_days||0)+'" oninput="recalcGenericInvoice()"></div></div><div class="small muted">Billable storage days: <b id="genericStorageBillable">'+Math.max(0,storageDays-(Number(d.waived_days)||0))+'</b></div><div id="genericStorageSummary" class="small muted" style="margin-top:5px"></div></div>'+ 
     '<div class="card"><div class="small muted">OTHER LINE ITEMS</div><div id="genericInvoiceLines" class="generic-invoice-lines">'+d.lines.map(genericInvoiceLineHtml).join('')+'</div><button type="button" class="btn secondary" onclick="addGenericInvoiceLine()">+ Add Line Item</button></div>'+ 
-    '<div class="card"><div class="row"><div><label class="small muted">TAX / OTHER</label><input id="genericTax" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.tax)+'" oninput="recalcGenericInvoice()"></div><div><div class="generic-total-row"><span>Subtotal</span><span id="genericSubtotal">$0.00</span></div><div class="generic-total-row total"><span>Total</span><span id="genericTotal">$0.00</span></div></div></div><textarea id="genericNotes" class="input" rows="4" placeholder="Invoice notes">'+esc(d.notes)+'</textarea></div>'+ 
+    '<div class="card"><div class="small muted">DEDUCTIONS / CREDITS</div><p class="small muted">Enter a normal positive amount. TowTag subtracts it automatically.</p><datalist id="towtagDeductionTypes"><option value="Courtesy Discount"><option value="Insurance Credit"><option value="Deposit Paid"><option value="Prior Payment"><option value="Storage Adjustment"><option value="Tow Charge Adjustment"><option value="Other Credit"></datalist><div id="genericDeductions" class="generic-invoice-lines">'+d.deductions.map(genericDeductionHtml).join('')+'</div><button type="button" class="btn secondary" onclick="addGenericDeduction()">+ Add Discount / Credit</button></div>'+ 
+    '<div class="card"><div class="row"><div><label class="small muted">TAX / OTHER</label><input id="genericTax" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(d.tax)+'" oninput="recalcGenericInvoice()"></div><div><div class="generic-total-row"><span>Charges</span><span id="genericChargesSubtotal">$0.00</span></div><div class="generic-total-row"><span>Deductions</span><span id="genericDeductionsTotal">−$0.00</span></div><div class="generic-total-row"><span>Subtotal</span><span id="genericSubtotal">$0.00</span></div><div class="generic-total-row total"><span>Total</span><span id="genericTotal">$0.00</span></div></div></div><textarea id="genericNotes" class="input" rows="4" placeholder="Invoice notes">'+esc(d.notes)+'</textarea></div>'+ 
+    invoicePaymentCard(d)+
     '<div class="invoice-actions"><button class="btn" onclick="saveInvoice()">Save Invoice</button><button class="btn secondary" onclick="printInvoiceFromForm()">Print / Save PDF</button></div><button class="btn secondary" onclick="detail(\''+v.id+'\')">Back to Vehicle</button>';
   setTimeout(recalcGenericInvoice,0);
 };
@@ -1544,9 +1566,100 @@ printInvoiceFromForm=function(){
   const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the invoice.');return}
   const backUrl=SITE+(v.id?'#vehicle-'+encodeURIComponent(v.id):'');
   const closeJs="if(window.opener&&!window.opener.closed){window.opener.focus();window.close();setTimeout(function(){location.href='"+SITE+"'},150)}else{location.href='"+SITE+"'}";
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invoice '+esc(number)+'</title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:#111;margin:0;background:#eee}.toolbar{position:sticky;top:0;z-index:20;background:#111;padding:10px;display:flex;gap:10px;justify-content:center}.toolbar button{border:0;border-radius:999px;padding:11px 16px;font-weight:800}.toolbar .back{background:#333;color:#fff}.sheet{background:#fff;max-width:850px;margin:0 auto;padding:32px}h1{margin:0;font-size:34px}.sub{color:#555;margin-top:4px}.top{display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #111;padding-bottom:18px}.box{margin-top:22px}.label{font-size:11px;font-weight:800;color:#666;letter-spacing:.08em}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border-bottom:1px solid #ccc;padding:11px 8px;text-align:left}th{background:#f2f2f2}.amt{text-align:right;width:150px}.totals{margin-left:auto;width:300px;margin-top:18px}.totalrow{display:flex;justify-content:space-between;padding:6px 0}.grand{font-size:22px;font-weight:900;border-top:2px solid #111;padding-top:10px}.notes{white-space:pre-wrap}@media(max-width:600px){.sheet{padding:20px}.top{flex-direction:column;gap:12px}.totals{width:100%}}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:0}}</style></head><body><div class="toolbar"><button class="back" onclick="'+closeJs+'">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><div class="top"><div><h1>INVOICE</h1><div class="sub">Mike’s Cascade Towing · TowTag</div></div><div><div><b>Invoice #:</b> '+esc(number||'—')+'</div><div><b>Date:</b> '+esc(d.generic_invoice_date||'—')+'</div></div></div><div class="box"><div class="label">BILL TO</div><div><b>'+esc(d.generic_customer_name||'—')+'</b></div><div>'+esc(d.generic_customer_phone||'')+'</div><div>'+esc(d.generic_customer_address||'')+'</div></div><div class="box"><div class="label">VEHICLE / TOW</div><div>'+esc(vehicle)+' · Plate '+esc(v.plate||'—')+' · VIN '+esc(v.vin||'—')+'</div><div>Tow / Case #: '+esc(v.tow_number||'—')+'</div></div><div class="box"><table><thead><tr><th>Description</th><th class="amt">Amount</th></tr></thead><tbody>'+rows+'</tbody></table><div class="totals"><div class="totalrow"><span>Subtotal</span><span>'+esc(money(Number(d.subtotal)||0))+'</span></div><div class="totalrow"><span>Tax / Other</span><span>'+esc(money(Number(d.tax)||0))+'</span></div><div class="totalrow grand"><span>Total</span><span>'+esc(money(Number(d.total)||0))+'</span></div></div></div>'+(d.generic_notes?'<div class="box"><div class="label">NOTES</div><div class="notes">'+esc(d.generic_notes)+'</div></div>':'')+'</div></body></html>');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invoice '+esc(number)+'</title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:#111;margin:0;background:#eee}.toolbar{position:sticky;top:0;z-index:20;background:#111;padding:10px;display:flex;gap:10px;justify-content:center}.toolbar button{border:0;border-radius:999px;padding:11px 16px;font-weight:800}.toolbar .back{background:#333;color:#fff}.sheet{background:#fff;max-width:850px;margin:0 auto;padding:32px}h1{margin:0;font-size:34px}.sub{color:#555;margin-top:4px}.top{display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #111;padding-bottom:18px}.box{margin-top:22px}.label{font-size:11px;font-weight:800;color:#666;letter-spacing:.08em}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border-bottom:1px solid #ccc;padding:11px 8px;text-align:left}th{background:#f2f2f2}.amt{text-align:right;width:150px}.totals{margin-left:auto;width:300px;margin-top:18px}.totalrow{display:flex;justify-content:space-between;padding:6px 0}.grand{font-size:22px;font-weight:900;border-top:2px solid #111;padding-top:10px}.notes{white-space:pre-wrap}@media(max-width:600px){.sheet{padding:20px}.top{flex-direction:column;gap:12px}.totals{width:100%}}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:0}}</style></head><body><div class="toolbar"><button class="back" onclick="'+closeJs+'">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><div class="top"><div><h1>INVOICE</h1><div class="sub">Mike’s Cascade Towing · TowTag</div></div><div><div><b>Invoice #:</b> '+esc(number||'—')+'</div><div><b>Date:</b> '+esc(d.generic_invoice_date||'—')+'</div></div></div><div class="box"><div class="label">BILL TO</div><div><b>'+esc(d.generic_customer_name||'—')+'</b></div><div>'+esc(d.generic_customer_phone||'')+'</div><div>'+esc(d.generic_customer_address||'')+'</div></div><div class="box"><div class="label">VEHICLE / TOW</div><div>'+esc(vehicle)+' · Plate '+esc(v.plate||'—')+' · VIN '+esc(v.vin||'—')+'</div><div>Tow / Case #: '+esc(v.tow_number||'—')+'</div></div><div class="box"><table><thead><tr><th>Description</th><th class="amt">Amount</th></tr></thead><tbody>'+rows+'</tbody></table><div class="totals"><div class="totalrow"><span>Charges</span><span>'+esc(money(Number(d.generic_charges_subtotal)||0))+'</span></div>'+(Number(d.generic_deductions_total)>0?'<div class="totalrow"><span>Deductions / Credits</span><span>−'+esc(money(Number(d.generic_deductions_total)||0))+'</span></div>':'')+'<div class="totalrow"><span>Subtotal</span><span>'+esc(money(Number(d.subtotal)||0))+'</span></div><div class="totalrow"><span>Tax / Other</span><span>'+esc(money(Number(d.tax)||0))+'</span></div><div class="totalrow grand"><span>Total</span><span>'+esc(money(Number(d.total)||0))+'</span></div></div></div>'+(d.generic_notes?'<div class="box"><div class="label">NOTES</div><div class="notes">'+esc(d.generic_notes)+'</div></div>':'')+'</div></body></html>');
   w.document.close();
 };
+
+
+// --- TowTag yard report, payment receipts, lien tracker, and storage waivers ---
+function savedInvoicePayments(v){
+  const d=invoiceStored(v);
+  return Array.isArray(d.generic_payments)?d.generic_payments:[];
+}
+function invoicePaidTotal(payments){return (payments||[]).reduce((sum,p)=>sum+Math.max(0,genericMoney(p?.amount)),0);}
+function invoicePaymentCard(d){
+  const payments=Array.isArray(d.payments)?d.payments:[];
+  const history=payments.length?'<div style="margin-top:12px">'+payments.slice().reverse().map(p=>'<div class="document-row"><div class="name">'+esc(money(genericMoney(p.amount)))+' · '+esc(p.method||'Payment')+'</div><div class="meta">'+esc(p.date||'')+(p.received_from?' · '+esc(p.received_from):'')+(p.reference?' · '+esc(p.reference):'')+'</div><button type="button" class="btn secondary" onclick="printInvoiceReceipt(\''+esc(p.id)+'\')">Reprint Receipt</button></div>').join('')+'</div>':'';
+  return '<div class="card"><div class="small muted">PAYMENT / RECEIPT</div><p class="small muted">Record a payment and TowTag will save it to this invoice and generate a receipt.</p><div class="row"><div><label class="small muted">AMOUNT PAID</label><input id="genericPaymentAmount" class="input" inputmode="decimal" placeholder="0.00"></div><div><label class="small muted">PAYMENT DATE</label><input id="genericPaymentDate" class="input" type="date" value="'+invoiceDateValue(new Date())+'"></div></div><div class="row"><div><label class="small muted">METHOD</label><select id="genericPaymentMethod" class="input"><option value="Cash">Cash</option><option value="Card">Card</option><option value="Check">Check</option><option value="Other">Other</option></select></div><div><label class="small muted">RECEIVED FROM</label><input id="genericPaymentFrom" class="input" placeholder="Name"></div></div><input id="genericPaymentReference" class="input" placeholder="Reference / check # / note"><textarea id="genericPaymentNotes" class="input" rows="2" placeholder="Payment notes"></textarea><div class="row"><button type="button" class="btn secondary" onclick="fillInvoiceBalance()">Fill Current Balance</button><button type="button" class="btn" onclick="recordInvoicePayment()">Save Payment & Print Receipt</button></div><div class="small muted" style="margin-top:10px">Previously paid: <b>'+money(invoicePaidTotal(payments))+'</b> · Current balance: <b id="genericPaymentBalance">—</b></div>'+history+'</div>';
+}
+function fillInvoiceBalance(){
+  recalcGenericInvoice();
+  const total=genericMoney(el('genericTotal')?.textContent),paid=invoicePaidTotal(savedInvoicePayments(selected));
+  const x=el('genericPaymentAmount');if(x)x.value=Math.max(0,total-paid).toFixed(2);
+}
+const _towtagRecalcGenericInvoice=recalcGenericInvoice;
+recalcGenericInvoice=function(){
+  _towtagRecalcGenericInvoice();
+  const total=genericMoney(el('genericTotal')?.textContent),paid=invoicePaidTotal(savedInvoicePayments(selected));
+  if(el('genericPaymentBalance'))el('genericPaymentBalance').textContent=money(Math.max(0,total-paid));
+};
+async function recordInvoicePayment(){
+  if(!selected)return;
+  const amount=Math.abs(genericMoney(val('genericPaymentAmount')));
+  if(!amount){alert('Enter the payment amount.');return}
+  const formData=collectGenericInvoice(),existing=invoiceStored(selected),payments=savedInvoicePayments(selected).slice();
+  const currentTotal=genericMoney(formData.total),alreadyPaid=invoicePaidTotal(payments),balance=Math.max(0,currentTotal-alreadyPaid);
+  if(balance>0&&amount>balance&&!confirm('This payment is greater than the current balance. Save it anyway?'))return;
+  const payment={id:'pay_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),date:val('genericPaymentDate')||invoiceDateValue(new Date()),amount:amount.toFixed(2),method:val('genericPaymentMethod')||'Payment',received_from:val('genericPaymentFrom')||'',reference:val('genericPaymentReference')||'',notes:val('genericPaymentNotes')||'',created_at:new Date().toISOString(),recorded_by:staffMember?.display_name||user?.email||''};
+  payments.push(payment);
+  const data={...existing,...formData,generic_payments:payments,generic_amount_paid:invoicePaidTotal(payments).toFixed(2),generic_balance_due:Math.max(0,currentTotal-invoicePaidTotal(payments)).toFixed(2)};
+  const id=selected.id,invoice_number=val('genericInvoiceNumber')||selected.invoice_number||null;
+  try{
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({invoice_number,invoice_data:data,invoice_updated_at:new Date().toISOString()})});
+    await load();selected=vehicles.find(v=>v.id===id);printInvoiceReceipt(payment.id);
+  }catch(e){alert('Payment save failed: '+e.message)}
+}
+function printInvoiceReceipt(paymentId=null){
+  if(!selected)return;
+  const v=selected,d=invoiceStored(v),payments=savedInvoicePayments(v);
+  if(!payments.length){alert('No saved payments are available for this invoice.');return}
+  let idx=paymentId?payments.findIndex(p=>p.id===paymentId):payments.length-1;if(idx<0)idx=payments.length-1;
+  const p=payments[idx],prior=invoicePaidTotal(payments.slice(0,idx)),invoiceTotal=genericMoney(d.total),after=prior+genericMoney(p.amount),balance=Math.max(0,invoiceTotal-after),vehicle=title(v),number=v.invoice_number||'—';
+  const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the receipt.');return}
+  const closeJs="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href='"+SITE+"'}";
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payment Receipt '+esc(number)+'</title><style>*{box-sizing:border-box}body{margin:0;background:#eee;color:#111;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}.toolbar{position:sticky;top:0;background:#111;padding:10px;display:flex;gap:10px;justify-content:center}.toolbar button{border:0;border-radius:999px;padding:11px 16px;font-weight:800}.back{background:#333;color:#fff}.sheet{background:#fff;max-width:720px;margin:auto;padding:32px}.brand{font-size:13px;font-weight:900;letter-spacing:.08em}.title{font-size:32px;font-weight:900;margin:7px 0 2px}.sub{color:#666}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:24px}.item{border-bottom:1px solid #ddd;padding:10px 0}.label{display:block;font-size:10px;font-weight:850;color:#666;letter-spacing:.08em;margin-bottom:4px}.big{font-size:28px;font-weight:900}.wide{grid-column:1/-1}.footer{border-top:2px solid #111;margin-top:28px;padding-top:10px;color:#666;font-size:11px}@media(max-width:560px){.sheet{padding:20px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:8mm}}</style></head><body><div class="toolbar"><button class="back" onclick="'+closeJs+'">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><div class="brand">MIKE’S CASCADE TOWING · TOWTAG</div><div class="title">Payment Receipt</div><div class="sub">Invoice # '+esc(number)+'</div><div class="grid"><div class="item"><span class="label">VEHICLE</span>'+esc(vehicle)+'</div><div class="item"><span class="label">PAYMENT DATE</span>'+esc(p.date||'—')+'</div><div class="item"><span class="label">RECEIVED FROM</span>'+esc(p.received_from||d.generic_customer_name||'—')+'</div><div class="item"><span class="label">PAYMENT METHOD</span>'+esc(p.method||'—')+'</div><div class="item"><span class="label">INVOICE TOTAL</span>'+money(invoiceTotal)+'</div><div class="item"><span class="label">PRIOR PAYMENTS</span>'+money(prior)+'</div><div class="item"><span class="label">THIS PAYMENT</span><span class="big">'+money(genericMoney(p.amount))+'</span></div><div class="item"><span class="label">BALANCE AFTER PAYMENT</span><span class="big">'+money(balance)+'</span></div><div class="item wide"><span class="label">REFERENCE</span>'+esc(p.reference||'—')+'</div><div class="item wide"><span class="label">NOTES</span>'+esc(p.notes||'—')+'</div></div><div class="footer">Payment recorded '+esc(p.created_at?new Date(p.created_at).toLocaleString():'')+(p.recorded_by?' by '+esc(p.recorded_by):'')+'</div></div></body></html>');
+  w.document.close();
+}
+
+function lienData(v){return v&&v.lien_data&&typeof v.lien_data==='object'&&!Array.isArray(v.lien_data)?v.lien_data:{};}
+const lienStatusLabel=v=>({preparing_notice:'Preparing Notice',notice_sent:'Notice Sent',waiting_period:'Waiting Period',eligible_action:'Eligible for Action',sale_scheduled:'Sale / Foreclosure Scheduled',completed:'Completed',stopped:'Stopped / Vehicle Released'}[v]||'Not started');
+function lienTrackerCard(v){
+  if(!v||v.record_type!=='lien_foreclosure'||v.deleted_at)return '';
+  const d=lienData(v),has=Object.keys(d).length>0;
+  return '<div class="card"><div class="small muted">LIEN FORECLOSURE TRACKER</div><div style="margin-top:8px"><span class="pill">'+esc(lienStatusLabel(d.status))+'</span></div>'+(has?'<div class="kv" style="margin-top:10px"><div><span>Notice sent</span>'+esc(d.notice_sent_date||'—')+'</div><div><span>Tracking #</span>'+esc(d.certified_tracking||'—')+'</div><div><span>Eligible action</span>'+esc(d.eligible_action_date||'—')+'</div><div><span>Sale / foreclosure</span>'+esc(d.sale_date||'—')+'</div></div>':'<p class="muted">No lien milestones have been entered yet.</p>')+'<button class="btn secondary" onclick="lienTrackerScreen()">Open Lien Tracker</button></div>';
+}
+function lienTrackerScreen(){
+  if(!selected||selected.record_type!=='lien_foreclosure')return;
+  const v=selected,d=lienData(v),opened=d.opened_date||invoiceDateValue(v.tow_date)||'';
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Lien Foreclosure Tracker</div><p class="muted">Track your lien milestones here. Dates are entered by staff; TowTag does not decide legal deadlines.</p><div class="card"><label class="small muted">STATUS</label><select id="lienStatus" class="input"><option value="preparing_notice" '+(d.status==='preparing_notice'?'selected':'')+'>Preparing Notice</option><option value="notice_sent" '+(d.status==='notice_sent'?'selected':'')+'>Notice Sent</option><option value="waiting_period" '+(d.status==='waiting_period'?'selected':'')+'>Waiting Period</option><option value="eligible_action" '+(d.status==='eligible_action'?'selected':'')+'>Eligible for Action</option><option value="sale_scheduled" '+(d.status==='sale_scheduled'?'selected':'')+'>Sale / Foreclosure Scheduled</option><option value="completed" '+(d.status==='completed'?'selected':'')+'>Completed</option><option value="stopped" '+(d.status==='stopped'?'selected':'')+'>Stopped / Vehicle Released</option></select><div class="row"><div><label class="small muted">LIEN OPENED</label><input id="lienOpenedDate" class="input" type="date" value="'+esc(opened)+'"></div><div><label class="small muted">NOTICE SENT</label><input id="lienNoticeDate" class="input" type="date" value="'+esc(d.notice_sent_date||'')+'"></div></div><input id="lienTracking" class="input" placeholder="Certified mail / tracking #" value="'+esc(d.certified_tracking||'')+'"><div class="row"><div><label class="small muted">ELIGIBLE ACTION DATE</label><input id="lienEligibleDate" class="input" type="date" value="'+esc(d.eligible_action_date||'')+'"></div><div><label class="small muted">SALE / FORECLOSURE DATE</label><input id="lienSaleDate" class="input" type="date" value="'+esc(d.sale_date||'')+'"></div></div><label class="toggle"><input id="lienOwnerNotified" type="checkbox" '+(d.owner_notified?'checked':'')+'> Owner / interested party notice completed</label><textarea id="lienNotes" class="input" rows="5" placeholder="Lien notes">'+esc(d.notes||'')+'</textarea><button class="btn" onclick="saveLienTracker()">Save Lien Tracker</button><button class="btn secondary" onclick="printLienSummary()">Print Lien Summary</button></div>';
+}
+async function saveLienTracker(){
+  if(!selected)return;
+  const id=selected.id,data={status:val('lienStatus')||'preparing_notice',opened_date:val('lienOpenedDate')||null,notice_sent_date:val('lienNoticeDate')||null,certified_tracking:val('lienTracking')||null,eligible_action_date:val('lienEligibleDate')||null,sale_date:val('lienSaleDate')||null,owner_notified:checked('lienOwnerNotified'),notes:val('lienNotes')||null,updated_at:new Date().toISOString(),updated_by:staffMember?.display_name||user?.email||null};
+  try{await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({lien_data:data})});await load();detail(id);alert('Lien tracker saved.')}catch(e){alert('Lien tracker save failed: '+e.message)}
+}
+function printLienSummary(){
+  if(!selected)return;const v=selected,d=lienData(v),w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the lien summary.');return}
+  const closeJs="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href='"+SITE+"'}";
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lien Summary</title><style>body{font-family:Arial,sans-serif;margin:0;background:#eee;color:#111}.toolbar{background:#111;padding:10px;text-align:center}.toolbar button{margin:0 5px;border:0;border-radius:999px;padding:10px 15px;font-weight:800}.back{background:#333;color:#fff}.sheet{max-width:760px;margin:auto;background:#fff;padding:32px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item{border-bottom:1px solid #ddd;padding:10px 0}.label{font-size:10px;font-weight:800;color:#666}.wide{grid-column:1/-1}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:8mm}}</style></head><body><div class="toolbar"><button class="back" onclick="'+closeJs+'">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><h1>Lien Foreclosure Tracker</h1><div>Mike’s Cascade Towing · TowTag</div><h2>'+esc(title(v))+'</h2><div class="grid"><div class="item"><span class="label">STATUS</span><br>'+esc(lienStatusLabel(d.status))+'</div><div class="item"><span class="label">TOW / CASE #</span><br>'+esc(v.tow_number||'—')+'</div><div class="item"><span class="label">LIEN OPENED</span><br>'+esc(d.opened_date||'—')+'</div><div class="item"><span class="label">NOTICE SENT</span><br>'+esc(d.notice_sent_date||'—')+'</div><div class="item"><span class="label">TRACKING #</span><br>'+esc(d.certified_tracking||'—')+'</div><div class="item"><span class="label">OWNER NOTICE COMPLETE</span><br>'+(d.owner_notified?'Yes':'No')+'</div><div class="item"><span class="label">ELIGIBLE ACTION DATE</span><br>'+esc(d.eligible_action_date||'—')+'</div><div class="item"><span class="label">SALE / FORECLOSURE DATE</span><br>'+esc(d.sale_date||'—')+'</div><div class="item wide"><span class="label">NOTES</span><br>'+esc(d.notes||'—')+'</div></div></div></body></html>');w.document.close();
+}
+
+function yardStorageInfo(v){
+  if(!v||v.record_type==='company_owned')return {days:0,waived:0,billable:0,rate:0,amount:0};
+  const d=invoiceStored(v),days=storageDayCount(v),waived=Math.min(days,Math.max(0,Number(d.generic_storage_waived_days)||0)),billable=Math.max(0,days-waived),rate=genericMoney(d.generic_storage_daily_rate??d.storage_rate??latestSavedStorageRate());
+  return {days,waived,billable,rate,amount:billable*rate};
+}
+function yardReportVehicles(){return vehicles.filter(v=>!v.deleted_at&&!v.archived_at);}
+function yardReport(){
+  selected=null;const rows=yardReportVehicles(),towRows=rows.filter(v=>v.record_type!=='company_owned'),holds=towRows.filter(v=>v.status==='hold').length,liens=rows.filter(v=>v.record_type==='lien_foreclosure').length,accidents=rows.filter(v=>v.status==='accident'||v.record_type==='accident_tow').length,totalEst=towRows.reduce((sum,v)=>sum+yardStorageInfo(v).amount,0);
+  const cards=rows.map(v=>{const st=yardStorageInfo(v),owned=v.record_type==='company_owned';return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc([v.plate_state,v.plate].filter(Boolean).join(' ')||'No plate')+' · '+esc(recordLabel(v.record_type))+' · '+esc(owned?ownedLabel(v.owned_disposition):statusLabel(v.status))+'</div><div class="small muted" style="margin-top:7px">'+(owned?'Company-owned vehicle':st.days+' days · '+st.waived+' waived · '+st.billable+' billable · '+(st.rate?money(st.rate)+'/day':'rate not set')+(st.rate?' · '+money(st.amount):''))+'</div></button>';}).join('');
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Yard Report</div><div class="muted">Current active yard inventory · '+new Date().toLocaleString()+'</div><div class="kv" style="margin-top:12px"><div><span>Vehicles</span>'+rows.length+'</div><div><span>Holds</span>'+holds+'</div><div><span>Accident / Tow-In</span>'+accidents+'</div><div><span>Lien Foreclosure</span>'+liens+'</div><div style="grid-column:1/-1"><span>Estimated Storage</span>'+money(totalEst)+'</div></div><button class="btn secondary" onclick="printYardReport()">Print / Save PDF</button><div style="margin-top:12px">'+(cards||'<div class="card muted">No active vehicles in the yard.</div>')+'</div>';
+}
+function printYardReport(){
+  const rows=yardReportVehicles(),totalEst=rows.reduce((sum,v)=>sum+yardStorageInfo(v).amount,0),body=rows.map(v=>{const st=yardStorageInfo(v),owned=v.record_type==='company_owned';return '<tr><td>'+esc(title(v))+'</td><td>'+esc([v.plate_state,v.plate].filter(Boolean).join(' ')||'—')+'</td><td>'+esc(recordLabel(v.record_type))+'</td><td>'+esc(owned?ownedLabel(v.owned_disposition):statusLabel(v.status))+'</td><td class="num">'+(owned?'—':st.days)+'</td><td class="num">'+(owned?'—':st.waived)+'</td><td class="num">'+(owned?'—':(st.rate?money(st.rate):'—'))+'</td><td class="num">'+(owned?'—':(st.rate?money(st.amount):'—'))+'</td></tr>';}).join('');
+  const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the yard report.');return}const closeJs="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href='"+SITE+"'}";
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yard Report</title><style>body{font-family:Arial,sans-serif;margin:0;background:#eee;color:#111}.toolbar{background:#111;padding:10px;text-align:center}.toolbar button{margin:0 5px;border:0;border-radius:999px;padding:10px 15px;font-weight:800}.back{background:#333;color:#fff}.sheet{max-width:1100px;margin:auto;background:#fff;padding:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left;font-size:12px}th{background:#f3f3f3}.num{text-align:right}.summary{font-weight:800;margin-top:12px}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:6mm}}</style></head><body><div class="toolbar"><button class="back" onclick="'+closeJs+'">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><h1>Yard Report</h1><div>Mike’s Cascade Towing · TowTag</div><div>'+esc(new Date().toLocaleString())+'</div><div class="summary">Active vehicles: '+rows.length+' · Estimated storage: '+money(totalEst)+'</div><table><thead><tr><th>Vehicle</th><th>Plate</th><th>Record Type</th><th>Status</th><th class="num">Days</th><th class="num">Waived</th><th class="num">Rate</th><th class="num">Est. Storage</th></tr></thead><tbody>'+body+'</tbody></table></div></body></html>');w.document.close();
+}
 
 const tag=new URLSearchParams(location.search).get('tag');
 if(passwordRecoveryFromUrl()){recoveryPasswordScreen()}
