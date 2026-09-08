@@ -94,6 +94,10 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 .export-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.export-grid .btn{margin-top:0}
 @media(max-width:560px){.alert-summary{grid-template-columns:1fr 1fr 1fr}.damage-map{grid-template-columns:1fr}.damage-extra,.export-grid{grid-template-columns:1fr}.damage-wide{grid-column:auto}}
 
+
+/* TowTag simple tap-to-mark vehicle damage diagram */
+.damage-canvas{position:relative;width:100%;height:min(66vh,560px);min-height:430px;border:1px solid #3a4652;border-radius:18px;background:radial-gradient(circle at center,#1b222a 0,#101419 72%);overflow:hidden;touch-action:manipulation;cursor:crosshair;user-select:none;-webkit-user-select:none}.damage-svg{position:absolute;inset:5% 13%;display:flex;align-items:center;justify-content:center;pointer-events:none}.damage-svg svg{width:100%;height:100%;display:block}.damage-marker-layer{position:absolute;inset:0;pointer-events:none}.damage-marker{pointer-events:auto;position:absolute;transform:translate(-50%,-50%);width:42px;height:42px;border:0;background:transparent;color:#ff3038;font-size:42px;line-height:42px;font-weight:950;display:grid;place-items:center;padding:0;text-shadow:0 2px 4px rgba(0,0,0,.85);z-index:4}.damage-marker:active{transform:translate(-50%,-50%) scale(.88)}.damage-view-help{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 2px 2px}.damage-view-help strong{font-size:13px}.damage-view-help span{font-size:12px;color:var(--muted);text-align:right}.damage-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.damage-toolbar .btn{margin-top:0}.damage-summary-count{display:flex;align-items:baseline;gap:6px;margin-top:7px}.damage-summary-count strong{font-size:24px;color:#ff777f}.damage-summary-count span{color:var(--muted);font-size:12px}
+@media(max-width:560px){.damage-canvas{height:58vh;min-height:390px}.damage-svg{inset:4% 10%}.damage-marker{width:44px;height:44px;font-size:44px}.damage-toolbar{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body><main class="wrap"><div id="app"></div></main>
@@ -1754,32 +1758,70 @@ const DAMAGE_ZONES=[
   ['driver_front','Driver Front'],['passenger_front','Passenger Front'],['driver_rear','Driver Rear'],['passenger_rear','Passenger Rear'],
   ['rear_trunk','Rear / Trunk'],['rear_bumper','Rear Bumper'],['interior','Interior'],['wheels_tires','Wheels / Tires'],['undercarriage','Undercarriage']
 ];
+const DAMAGE_VIEWS=[['car','Car']];
+let damageDraft=null;
 function damageData(v){return v&&v.damage_data&&typeof v.damage_data==='object'&&!Array.isArray(v.damage_data)?v.damage_data:{};}
 function damageZoneLabel(k){return DAMAGE_ZONES.find(x=>x[0]===k)?.[1]||k;}
+function damagePointList(d){
+  return Array.isArray(d?.points)?d.points.filter(p=>p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y))).map(p=>({...p,view:'car'})):[];
+}
 function damageSummaryCard(v){
   if(!v||v.deleted_at)return '';
-  const d=damageData(v),zones=Array.isArray(d.zones)?d.zones:[];
-  if(!zones.length&&!d.notes)return '<div class="card"><div class="small muted">DAMAGE DIAGRAM</div><p class="muted">No damage areas marked.</p><button class="btn secondary" onclick="damageDiagramScreen()">Open Damage Diagram</button></div>';
-  return '<div class="card"><div class="small muted">DAMAGE DIAGRAM</div>'+(zones.length?'<div class="alert-tags">'+zones.map(z=>'<span class="alert-tag">'+esc(damageZoneLabel(z))+'</span>').join('')+'</div>':'')+(d.notes?'<div style="margin-top:10px">'+esc(d.notes)+'</div>':'')+'<button class="btn secondary" onclick="damageDiagramScreen()">Edit Damage Diagram</button></div>';
+  const d=damageData(v),points=damagePointList(d);
+  if(!points.length)return '<div class="card"><div class="small muted">DAMAGE DIAGRAM</div><p class="muted">No damage marked.</p><button class="btn secondary" onclick="damageDiagramScreen()">Open Damage Diagram</button></div>';
+  return '<div class="card"><div class="small muted">DAMAGE DIAGRAM</div><div class="damage-summary-count"><strong>'+points.length+'</strong><span> X mark'+(points.length===1?'':'s')+' saved</span></div><button class="btn secondary" onclick="damageDiagramScreen()">Edit Damage Diagram</button></div>';
 }
-function damageButton(zone,label,active){return '<button type="button" class="damage-zone '+(active?'active':'')+'" data-zone="'+esc(zone)+'" onclick="toggleDamageZone(this)">'+esc(label)+'</button>';}
+function damageVehicleSvg(){
+  const body='fill="#1a2027" stroke="#a5b1bd" stroke-width="2.2" vector-effect="non-scaling-stroke"';
+  const glass='fill="#273541" stroke="#a5b1bd" stroke-width="1.6" vector-effect="non-scaling-stroke"';
+  const wheel='fill="#080a0d" stroke="#87939f" stroke-width="1.5" vector-effect="non-scaling-stroke"';
+  return '<svg viewBox="0 0 160 300" role="img" aria-label="Top view car damage diagram">'+
+    '<rect '+wheel+' x="19" y="60" width="16" height="58" rx="7"/><rect '+wheel+' x="125" y="60" width="16" height="58" rx="7"/><rect '+wheel+' x="19" y="185" width="16" height="58" rx="7"/><rect '+wheel+' x="125" y="185" width="16" height="58" rx="7"/>'+
+    '<path '+body+' d="M52 8 Q80 0 108 8 Q122 15 128 38 L137 76 139 215 129 258 Q122 287 80 296 Q38 287 31 258 L21 215 23 76 32 38 Q38 15 52 8Z"/>'+
+    '<path '+glass+' d="M47 48 Q80 30 113 48 L122 91 38 91Z"/>'+
+    '<path '+glass+' d="M38 198 122 198 113 252 Q80 270 47 252Z"/>'+
+    '<path d="M37 99 H123 L126 187 H34Z" fill="#202a33" stroke="#7f8b97" stroke-width="1.4"/>'+
+    '<line x1="80" y1="99" x2="80" y2="187" stroke="#7f8b97" stroke-width="1.2"/>'+
+    '<line x1="34" y1="143" x2="126" y2="143" stroke="#7f8b97" stroke-width="1.2"/>'+
+    '<path d="M47 18 Q80 9 113 18" fill="none" stroke="#76ff03" stroke-width="4" stroke-linecap="round"/>'+
+    '<text x="80" y="35" text-anchor="middle" fill="#a5b1bd" font-size="9" font-weight="800">FRONT</text>'+
+    '</svg>';
+}
 function damageDiagramScreen(){
   if(!selected)return;
-  const v=selected,d=damageData(v),set=new Set(Array.isArray(d.zones)?d.zones:[]);
-  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Damage Diagram</div><p class="muted">Tap every area with existing or observed damage. Tap again to clear it.</p><div class="card"><div class="damage-map"><div style="display:grid;gap:8px">'+damageButton('driver_front','Driver Front',set.has('driver_front'))+damageButton('driver_rear','Driver Rear',set.has('driver_rear'))+'</div><div class="damage-center">'+damageButton('front_bumper','Front Bumper',set.has('front_bumper'))+'<div class="damage-car">'+damageButton('hood','Hood',set.has('hood'))+damageButton('windshield','Windshield',set.has('windshield'))+damageButton('roof','Roof',set.has('roof'))+damageButton('rear_trunk','Rear / Trunk',set.has('rear_trunk'))+'</div>'+damageButton('rear_bumper','Rear Bumper',set.has('rear_bumper'))+'</div><div style="display:grid;gap:8px">'+damageButton('passenger_front','Passenger Front',set.has('passenger_front'))+damageButton('passenger_rear','Passenger Rear',set.has('passenger_rear'))+'</div></div><div class="damage-extra">'+damageButton('interior','Interior',set.has('interior'))+damageButton('wheels_tires','Wheels / Tires',set.has('wheels_tires'))+damageButton('undercarriage','Undercarriage',set.has('undercarriage'))+'</div><textarea id="damageDiagramNotes" class="input" rows="5" placeholder="Damage notes">'+esc(d.notes||'')+'</textarea><button class="btn" onclick="saveDamageDiagram()">Save Damage Diagram</button><button class="btn secondary" onclick="clearDamageDiagram()">Clear All Marks</button></div>';
+  const v=selected,d=damageData(v),points=damagePointList(d).map((p,i)=>({...p,id:p.id||('saved-'+i),view:'car'}));
+  damageDraft={points,zones:Array.isArray(d.zones)?[...d.zones]:[],notes:d.notes||''};
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Damage Diagram</div><p class="muted">Tap the car to place an X where you see damage. Tap an X to remove it.</p><div class="card"><div id="damageCanvasWrap"></div><div class="damage-toolbar"><button class="btn secondary" type="button" onclick="undoDamageMark()">Undo Last X</button><button class="btn secondary" type="button" onclick="clearDamageMarks()">Clear X Marks</button></div><button class="btn" onclick="saveDamageDiagram()">Save Damage Diagram</button></div>';
+  renderDamageViewport();
 }
-function toggleDamageZone(btn){btn.classList.toggle('active');}
-function clearDamageDiagram(){document.querySelectorAll('.damage-zone.active').forEach(x=>x.classList.remove('active'));if(el('damageDiagramNotes'))el('damageDiagramNotes').value='';}
+function renderDamageViewport(){
+  const host=el('damageCanvasWrap');if(!host||!damageDraft)return;
+  const points=damageDraft.points;
+  host.innerHTML='<div class="damage-canvas" onclick="placeDamageMark(event)"><div class="damage-svg">'+damageVehicleSvg()+'</div><div class="damage-marker-layer">'+points.map(p=>'<button type="button" class="damage-marker" aria-label="Remove damage mark" style="left:'+Number(p.x).toFixed(3)+'%;top:'+Number(p.y).toFixed(3)+'%" onclick="removeDamageMark(event,\''+esc(p.id)+'\')">×</button>').join('')+'</div></div><div class="damage-view-help"><strong>Tap to mark damage</strong><span>'+points.length+' X mark'+(points.length===1?'':'s')+'</span></div>';
+}
+function placeDamageMark(event){
+  if(!damageDraft||event.target.closest('.damage-marker'))return;
+  const box=event.currentTarget.getBoundingClientRect();
+  if(!box.width||!box.height)return;
+  const x=Math.max(0,Math.min(100,((event.clientX-box.left)/box.width)*100));
+  const y=Math.max(0,Math.min(100,((event.clientY-box.top)/box.height)*100));
+  const id=(globalThis.crypto&&globalThis.crypto.randomUUID?globalThis.crypto.randomUUID():('mark-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
+  damageDraft.points.push({id,view:'car',x:Number(x.toFixed(3)),y:Number(y.toFixed(3))});
+  renderDamageViewport();
+}
+function removeDamageMark(event,id){event.stopPropagation();if(!damageDraft)return;damageDraft.points=damageDraft.points.filter(p=>String(p.id)!==String(id));renderDamageViewport();}
+function undoDamageMark(){if(!damageDraft||!damageDraft.points.length)return;damageDraft.points.pop();renderDamageViewport();}
+function clearDamageMarks(){if(!damageDraft)return;if(damageDraft.points.length&&!confirm('Clear all damage X marks?'))return;damageDraft.points=[];renderDamageViewport();}
 async function saveDamageDiagram(){
-  if(!selected)return;
-  const zones=[...document.querySelectorAll('.damage-zone.active')].map(x=>x.dataset.zone).filter(Boolean);
-  const data={zones,notes:val('damageDiagramNotes')||'',updated_at:new Date().toISOString(),updated_by:staffMember?.display_name||user?.email||''},id=selected.id;
+  if(!selected||!damageDraft)return;
+  const points=damageDraft.points.map(({id,x,y})=>({id,view:'car',x:Number(x),y:Number(y)}));
+  const previous=damageData(selected);
+  const data={version:3,points,zones:Array.isArray(previous.zones)?previous.zones:[],notes:previous.notes||'',active_view:'car',updated_at:new Date().toISOString(),updated_by:staffMember?.display_name||user?.email||''},id=selected.id;
   try{
     await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({damage_data:data})});
     await load();detail(id);alert('Damage diagram saved.');
   }catch(e){alert('Damage diagram save failed: '+e.message)}
 }
-
 function csvCell(v){
   const x=v==null?'':(typeof v==='object'?JSON.stringify(v):String(v));
   return '"'+x.replace(/"/g,'""')+'"';
@@ -1789,11 +1831,11 @@ function downloadExport(name,content,type='text/csv;charset=utf-8'){
   const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 function exportVehiclesCsv(){
-  const headers=['id','record_type','status','tow_date','year','make','model','color','plate','plate_state','vin','tow_number','agency','impound_type','yard_location','yard_spot','driver_name','release_at','released_to','invoice_number','invoice_total','amount_paid','balance_due','lien_status','lien_eligible_date','damage_zones','damage_notes','archived_at','deleted_at'];
+  const headers=['id','record_type','status','tow_date','year','make','model','color','plate','plate_state','vin','tow_number','agency','impound_type','yard_location','yard_spot','driver_name','release_at','released_to','invoice_number','invoice_total','amount_paid','balance_due','lien_status','lien_eligible_date','damage_marks','damage_views','damage_zones','damage_notes','archived_at','deleted_at'];
   const rows=vehicles.map(v=>{const d=invoiceStored(v),l=lienData(v),dam=damageData(v);return {
     ...v,agency:agencyForVehicle(v)?.name||'',invoice_total:d.total||'',amount_paid:invoicePaidTotal(savedInvoicePayments(v)).toFixed(2),
     balance_due:Math.max(0,genericMoney(d.total)-invoicePaidTotal(savedInvoicePayments(v))).toFixed(2),lien_status:l.status||'',lien_eligible_date:l.eligible_action_date||'',
-    damage_zones:(dam.zones||[]).map(damageZoneLabel).join('; '),damage_notes:dam.notes||''
+    damage_marks:damagePointList(dam).length,damage_views:[...new Set(damagePointList(dam).map(p=>DAMAGE_VIEWS.find(x=>x[0]===p.view)?.[1]||p.view))].join('; '),damage_zones:(dam.zones||[]).map(damageZoneLabel).join('; '),damage_notes:dam.notes||''
   };});
   downloadExport('towtag-vehicles-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,rows));
 }
