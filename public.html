@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<title>TowTag Public Vehicle Record</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0d10;--card:#15191f;--line:#29313a;--text:#f5f7fa;--muted:#98a3ae;--green:#76ff03}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.wrap{max-width:760px;margin:auto;min-height:100vh;padding:max(24px,env(safe-area-inset-top)) 16px max(40px,env(safe-area-inset-bottom))}.brand{font-size:13px;font-weight:950;letter-spacing:.11em}.brand b{color:var(--green)}.eyebrow{margin-top:24px;font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}h1{font-size:34px;line-height:1.05;margin:8px 0 4px}.muted{color:var(--muted)}.pill{display:inline-block;margin-top:14px;padding:8px 12px;border-radius:999px;background:#20320f;color:#baff83;font-size:13px;font-weight:850}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{background:#101419;border-radius:12px;padding:13px}.field span{display:block;color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}.field strong{display:block;font-size:17px;line-height:1.25;overflow-wrap:anywhere}.section-title{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}.photos{display:grid;grid-template-columns:1fr 1fr;gap:12px}.photos figure{margin:0;background:#101419;border-radius:14px;overflow:hidden}.photos img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#101419}.photos figcaption{padding:9px 10px;color:#aab3bd;font-size:12px}.notice{background:#151c12;border:1px solid #30431e;color:#cfffaa;border-radius:14px;padding:14px}.error{background:#271417;border:1px solid #5a272e;color:#ffb7bf;border-radius:14px;padding:14px}.loading{text-align:center;padding:70px 20px;color:var(--muted)}.foot{text-align:center;color:#69737e;font-size:11px;margin:24px 0 8px}.photo-error{display:flex;align-items:center;justify-content:center;min-height:160px;padding:20px;color:var(--muted);font-size:12px;text-align:center}
+@media(max-width:560px){.grid,.photos{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main class="wrap" id="app"><div class="loading">Loading TowTag…</div></main>
+<script>
+const BASE='https://ckonxzprnxqlefxscudt.supabase.co';
+const labelMap={
+  in_yard:'In Yard',accident:'Accident / Tow-In',awaiting_pickup:'Awaiting Owner Pickup',awaiting_insurance:'Awaiting Insurance',awaiting_agency_release:'Awaiting Agency Release',impounded:'Impounded',hold:'Hold',storage_only:'Storage Only',lien_foreclosure:'Lien Foreclosure',released:'Released',auction:'Auction',other:'Other',
+  police_impound:'Police Impound',dui_arrest:'DUI / Arrest',suspended_no_license:'Suspended / No License',no_insurance:'No Insurance',traffic_safety_violation:'Traffic / Safety Violation',motor_vehicle_accident:'Motor Vehicle Accident',preference_motor_vehicle_accident:'Preference MVA',private_property_impound:'Private Property / Trespass',private_party_impound:'Private Party Impound',owner_request:'Owner Request',abandoned_vehicle:'Abandoned Vehicle',stolen_recovered:'Stolen / Recovered Vehicle',disabled_breakdown:'Disabled / Breakdown',parking_violation:'Parking Violation',evidence_investigation:'Evidence / Investigation',road_hazard_obstruction:'Road Hazard / Obstruction',repossession:'Repossession',
+  tow:'Tow / Impound',accident_tow:'Accident / Tow-In',company_owned:'Company Owned',for_sale:'For Sale',scrap:'Going to Scrap',sold:'Sold',scrapped:'Scrapped'
+};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const label=v=>labelMap[String(v??'')]||String(v??'').replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase())||'—';
+function field(k,v){return '<div class="field"><span>'+esc(k)+'</span><strong>'+esc(v||'—')+'</strong></div>'}
+function photoCard(p){return '<figure><img src="'+esc(p.url)+'" alt="'+esc(p.caption||'Vehicle photo')+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.insertAdjacentHTML(\'beforebegin\',\'<div class=\\\'photo-error\\\'>Photo unavailable. Refresh this page to request a new photo link.</div>\')"><figcaption>'+esc(p.caption||'Vehicle photo')+'</figcaption></figure>'}
+async function start(){
+  const app=document.getElementById('app');
+  const token=new URLSearchParams(location.search).get('token')||'';
+  if(!/^[0-9a-f-]{36}$/i.test(token)){app.innerHTML='<div class="error">This TowTag link is invalid.</div>';return}
+  try{
+    const r=await fetch(BASE+'/functions/v1/towtag-public-vehicle?token='+encodeURIComponent(token),{cache:'no-store'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||'TowTag could not be loaded.');
+    const vehicle=[d.vehicle?.year,d.vehicle?.make,d.vehicle?.model].filter(Boolean).join(' ')||'Vehicle';
+    const status=d.recordType==='company_owned'?(d.ownedDisposition?label(d.ownedDisposition):'Company Owned'):label(d.status);
+    const plate=d.plate?[d.plate.number,d.plate.state].filter(Boolean).join(' '):'—';
+    document.title='TowTag — '+vehicle;
+    const fields=[
+      ['Record Type',label(d.recordType||'tow')],['Status',status],['Plate',plate],['Brought In',d.towDate?new Date(d.towDate).toLocaleString():'—'],['Agency',d.agency||'—'],['Tow Reason',label(d.impoundType)],['Picked Up From',d.pickupLocation||'—']
+    ];
+    const photos=Array.isArray(d.photos)?d.photos:[];
+    app.innerHTML='<div class="brand">MIKE’S CASCADE TOWING · <b>TOWTAG</b></div><div class="eyebrow">Public Vehicle Record</div><h1>'+esc(vehicle)+'</h1><div class="muted">'+esc(d.vehicle?.color||'Color not listed')+'</div><div class="pill">'+esc(status)+'</div><section class="card"><div class="grid">'+fields.map(x=>field(x[0],x[1])).join('')+'</div></section>'+(photos.length?'<section class="card"><div class="section-title">Photos</div><div class="photos">'+photos.map(photoCard).join('')+'</div></section>':'<div class="notice">No public photos are available for this vehicle yet.</div>')+'<div class="foot">TowTag public vehicle record · Mike’s Cascade Towing</div>';
+  }catch(e){app.innerHTML='<div class="error"><strong>Couldn’t open this TowTag.</strong><br><br>'+esc(e.message||'Please try the link again.')+'</div>'}
+}
+start();
+</script>
+</body>
+</html>

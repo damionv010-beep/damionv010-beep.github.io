@@ -90,7 +90,7 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 const BASE='https://ckonxzprnxqlefxscudt.supabase.co';
 const KEY='sb_publishable_fQ-Cv2dhMlib6_16oh-WiQ_Ku96PhPp';
 const SITE='https://damionv010-beep.github.io/';
-const PUBLIC_TAG='https://ckonxzprnxqlefxscudt.supabase.co/functions/v1/towtag-public-tag';
+const PUBLIC_TAG='https://damionv010-beep.github.io/public.html';
 const INVOICE_BG='';
 let session=null,user=null,staffMember=null,vehicles=[],photoRows=[],documentRows=[],agencyRows=[],billingProfiles=[],selected=null,movePhotoId=null;
 const app=document.getElementById('app');
@@ -818,8 +818,8 @@ function printReleaseReceipt(){
 function detail(id){
   selected=vehicles.find(v=>v.id===id); const v=selected; if(!v)return;
   const owned=v.record_type==='company_owned';
-  const qr=BASE+'/functions/v1/towtag-qr?token='+encodeURIComponent(v.qr_token);
   const publicUrl=PUBLIC_TAG+'?token='+encodeURIComponent(v.qr_token);
+  const qr='https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=10&data='+encodeURIComponent(publicUrl);
   const badge=owned?ownedLabel(v.owned_disposition):statusLabel(v.status);
   const releaseCard=(!owned&&!v.deleted_at)?((v.release_at||v.status==='released')?
     '<div class="card" id="releaseCard"><div class="small muted">RELEASE RECORD</div>'+(v.release_at?'<div class="kv" style="margin-top:10px"><div><span>Released</span>'+esc(new Date(v.release_at).toLocaleString())+'</div><div><span>Released to</span>'+esc(v.released_to||'—')+'</div><div><span>ID checked</span>'+(v.release_id_checked?'Yes':'No')+'</div><div><span>Authorized by</span>'+esc(v.release_authorized_by||'—')+'</div><div style="grid-column:1/-1"><span>Release notes</span>'+esc(v.release_notes||'—')+'</div></div>':'<div class="notice">This vehicle is marked Released.</div>')+(v.release_signature_data?'<div class="small muted" style="margin-top:12px">RELEASE SIGNATURE</div><img class="signature-preview" src="'+esc(v.release_signature_data)+'">':'')+'<div class="quick-actions"><button class="btn" onclick="printReleaseReceipt()">Print Release Receipt</button><button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button></div></div>':
