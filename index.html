@@ -83,6 +83,17 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 .generic-total-row.total{font-size:20px;border-top:1px solid var(--line);margin-top:6px;padding-top:12px}
 @media(max-width:560px){.generic-invoice-line{grid-template-columns:minmax(0,1fr) 96px 42px}}
 
+
+/* Aging alerts, customer notifications, damage diagram, exports */
+.alert-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.alert-summary .stat{background:#101419;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.alert-summary .stat strong{display:block;font-size:22px}.alert-summary .stat span{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.alert-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.alert-tag{display:inline-block;border-radius:999px;padding:5px 8px;background:#3b2710;color:#ffd28a;font-size:11px;font-weight:800}.alert-tag.urgent{background:#44171b;color:#ffb8bf}
+.notify-preview{white-space:pre-wrap;background:#101419;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:140px}
+.damage-map{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:8px;align-items:stretch;margin:12px 0}.damage-zone{border:1px solid #3a4652;background:#101419;color:#dce3e9;border-radius:12px;padding:12px 8px;font-weight:800;min-height:52px}.damage-zone.active{border-color:#ffb84a;background:#3a2710;color:#ffd28a}.damage-center{display:grid;gap:8px}.damage-car{border:2px solid #46515d;border-radius:28px;background:#15191f;padding:10px;display:grid;gap:8px}.damage-car .damage-zone{min-height:58px}.damage-wide{grid-column:1/-1}.damage-extra{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.export-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.export-grid .btn{margin-top:0}
+@media(max-width:560px){.alert-summary{grid-template-columns:1fr 1fr 1fr}.damage-map{grid-template-columns:1fr}.damage-extra,.export-grid{grid-template-columns:1fr}.damage-wide{grid-column:auto}}
+
 </style>
 </head>
 <body><main class="wrap"><div id="app"></div></main>
@@ -613,9 +624,10 @@ function home(){
   const towCount=active.filter(v=>(v.record_type||'tow')!=='company_owned').length;
   const saleCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale').length;
   const scrapCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap').length;
-  const adminButton=staffMember?.role==='admin'?'<button class="link" onclick="adminStaffScreen()">Staff</button>':'';
+  const alertCount=agingAlertVehicles().length;
+  const adminButton=staffMember?.role==='admin'?'<button class="link" onclick="adminStaffScreen()">Staff</button><button class="link" onclick="exportCenter()">Export</button>':'';
   app.innerHTML='<div class="top"><div>'+BRAND_HTML+'<div class="muted small">'+active.length+' active · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap · '+archivedCount+' archived · '+trashCount+' trash'+(queuedCount?' · '+queuedCount+' waiting to sync':'')+'</div></div><div style="display:flex;gap:12px">'+adminButton+'<button class="link" onclick="logout()">Sign Out</button></div></div>'+
-  '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="yardReport()">Yard Report</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
+  '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="yardReport()">Yard Report</button><button class="btn secondary" onclick="agingAlertsScreen()">Aging Alerts'+(alertCount?' ('+alertCount+')':'')+'</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
   (queuedCount?'<button class="btn secondary" onclick="syncOfflineIntakes()">Sync '+queuedCount+' Saved Intake'+(queuedCount===1?'':'s')+'</button>':'')+
   '<div class="choice-grid filters" style="grid-template-columns:repeat(6,1fr);margin-top:12px"><button class="choice active" data-filter onclick="setHomeFilter(\'all\',this)">Active</button><button class="choice" data-filter onclick="setHomeFilter(\'tow\',this)">Tows</button><button class="choice" data-filter onclick="setHomeFilter(\'sale\',this)">For Sale</button><button class="choice" data-filter onclick="setHomeFilter(\'scrap\',this)">Scrap</button><button class="choice" data-filter onclick="setHomeFilter(\'archive\',this)">Archive</button><button class="choice" data-filter onclick="setHomeFilter(\'trash\',this)">Trash</button></div>'+
   '<input id="search" class="input" type="search" autocomplete="off" placeholder="Search everything — plate, VIN, case #, invoice, owner…" oninput="render(this.value)"><div id="list"></div>';
@@ -794,6 +806,8 @@ function scrollVehicleSection(id){const node=document.getElementById(id);if(node
 function quickActionsCard(v,owned){
   if(v.deleted_at)return '';
   let buttons='<button class="btn secondary" onclick="copyVehicleInfo()">Copy Vehicle Info</button>'+
+    '<button class="btn secondary" onclick="customerNotificationScreen()">Notify Customer</button>'+
+    '<button class="btn secondary" onclick="damageDiagramScreen()">Damage Diagram</button>'+
     '<button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button>'+
     '<button class="btn secondary" onclick="scrollVehicleSection(\'vehicleMediaCard\')">Photos / QR</button>';
   if(!owned)buttons+='<button class="btn secondary" onclick="invoiceForm()">Invoice</button>';
@@ -828,7 +842,7 @@ function detail(id){
   '<div class="card kv"><div><span>Added</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
   const statusCard=(!owned&&!v.deleted_at)?'<div class="card"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">This is an older record that was previously marked Auction. Auction is no longer available for new records.</div>':'')+'<select id="vehicleStatus" class="input">'+statusOptions(v.status)+'</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>':'';
   const archiveCard=v.deleted_at?'<div class="card"><div class="small muted">TRASH</div><div class="error">Moved to Trash '+esc(new Date(v.deleted_at).toLocaleString())+'. The record is recoverable until you permanently delete it.</div><button class="btn" onclick="restoreTrashedVehicle()">Restore Vehicle</button></div>':(v.archived_at?'<div class="card"><div class="small muted">ARCHIVED</div><div class="notice">This vehicle left the active yard list on '+esc(new Date(v.archived_at).toLocaleString())+'. All photos, invoices, billing and TowTag data are still saved.</div>'+((v.release_at||v.status==='released')?'<button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button>':'<button class="btn secondary" onclick="restoreVehicle()">Restore to Active Vehicles</button>')+'</div>':'<div class="card"><div class="small muted">ARCHIVE</div><p class="muted">Use this when the vehicle has left the yard. Nothing is deleted.</p><button class="btn secondary" onclick="archiveVehicle()">Archive Vehicle</button></div>');
-  app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill '+(v.deleted_at?'trash-pill':'')+'">'+esc(v.deleted_at?'Trash':badge)+'</span></div>'+quickActionsCard(v,owned)+towInfo+lienTrackerCard(v)+attentionCard(v)+agencyCard(v)+ownedCard(v)+billingCard(v)+
+  app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill '+(v.deleted_at?'trash-pill':'')+'">'+esc(v.deleted_at?'Trash':badge)+'</span></div>'+quickActionsCard(v,owned)+towInfo+damageSummaryCard(v)+lienTrackerCard(v)+attentionCard(v)+agencyCard(v)+ownedCard(v)+billingCard(v)+
   '<div class="row">'+(!v.deleted_at?'<button class="btn secondary" onclick="editVehicleForm()">Edit Vehicle</button>':'')+'<button class="btn secondary" onclick="printTowSheet()">Print Tow Sheet</button></div>'+(!owned&&!v.deleted_at?'<button class="btn" onclick="invoiceForm()">'+(v.invoice_number?'Invoice # '+esc(v.invoice_number):'Create Invoice')+'</button>':'')+statusCard+releaseCard+
   documentsCard(v)+
   '<div class="card" id="vehicleMediaCard" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div><input id="cameraPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotos(this.files)"><input id="libraryPhoto" type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this.files)">'+
@@ -1659,6 +1673,168 @@ function printYardReport(){
   const rows=yardReportVehicles(),totalEst=rows.reduce((sum,v)=>sum+yardStorageInfo(v).amount,0),body=rows.map(v=>{const st=yardStorageInfo(v),owned=v.record_type==='company_owned';return '<tr><td>'+esc(title(v))+'</td><td>'+esc([v.plate_state,v.plate].filter(Boolean).join(' ')||'—')+'</td><td>'+esc(recordLabel(v.record_type))+'</td><td>'+esc(owned?ownedLabel(v.owned_disposition):statusLabel(v.status))+'</td><td class="num">'+(owned?'—':st.days)+'</td><td class="num">'+(owned?'—':st.waived)+'</td><td class="num">'+(owned?'—':(st.rate?money(st.rate):'—'))+'</td><td class="num">'+(owned?'—':(st.rate?money(st.amount):'—'))+'</td></tr>';}).join('');
   const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the yard report.');return}const closeJs="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href='"+SITE+"'}";
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yard Report</title><style>body{font-family:Arial,sans-serif;margin:0;background:#eee;color:#111}.toolbar{background:#111;padding:10px;text-align:center}.toolbar button{margin:0 5px;border:0;border-radius:999px;padding:10px 15px;font-weight:800}.back{background:#333;color:#fff}.sheet{max-width:1100px;margin:auto;background:#fff;padding:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left;font-size:12px}th{background:#f3f3f3}.num{text-align:right}.summary{font-weight:800;margin-top:12px}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:6mm}}</style></head><body><div class="toolbar"><button class="back" onclick="'+closeJs+'">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><h1>Yard Report</h1><div>Mike’s Cascade Towing · TowTag</div><div>'+esc(new Date().toLocaleString())+'</div><div class="summary">Active vehicles: '+rows.length+' · Estimated storage: '+money(totalEst)+'</div><table><thead><tr><th>Vehicle</th><th>Plate</th><th>Record Type</th><th>Status</th><th class="num">Days</th><th class="num">Waived</th><th class="num">Rate</th><th class="num">Est. Storage</th></tr></thead><tbody>'+body+'</tbody></table></div></body></html>');w.document.close();
+}
+
+
+// --- TowTag aging alerts, customer notifications, damage diagram, and exports ---
+function daysSince(value){
+  if(!value)return 0;
+  const d=new Date(value);if(Number.isNaN(d.getTime()))return 0;
+  return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));
+}
+function agingReasons(v){
+  if(!v||v.deleted_at||v.archived_at||v.release_at||v.status==='released')return [];
+  const age=daysSince(v.tow_date),reasons=[];
+  if(age>=60)reasons.push({label:'60+ days in yard',urgent:true});
+  else if(age>=30)reasons.push({label:'30+ days in yard',urgent:true});
+  else if(age>=15)reasons.push({label:'15+ days in yard',urgent:false});
+  if(age>=7&&v.status==='awaiting_insurance')reasons.push({label:'Awaiting insurance '+age+'d',urgent:false});
+  if(age>=7&&v.status==='awaiting_pickup')reasons.push({label:'Awaiting pickup '+age+'d',urgent:false});
+  const ld=lienData(v),eligible=ld.eligible_action_date?new Date(ld.eligible_action_date+'T12:00:00'):null;
+  if(eligible&&!Number.isNaN(eligible.getTime())&&ld.status!=='completed'&&ld.status!=='stopped'){
+    const delta=Math.ceil((eligible.getTime()-Date.now())/86400000);
+    if(delta<0)reasons.push({label:'Lien action date passed',urgent:true});
+    else if(delta===0)reasons.push({label:'Lien action date today',urgent:true});
+    else if(delta<=7)reasons.push({label:'Lien action date in '+delta+'d',urgent:false});
+  }
+  return reasons;
+}
+function agingAlertVehicles(){
+  return vehicles.filter(v=>agingReasons(v).length).sort((a,b)=>daysSince(b.tow_date)-daysSince(a.tow_date));
+}
+function agingAlertsScreen(){
+  selected=null;
+  const rows=agingAlertVehicles(),old30=rows.filter(v=>daysSince(v.tow_date)>=30).length,old60=rows.filter(v=>daysSince(v.tow_date)>=60).length,lienDue=rows.filter(v=>agingReasons(v).some(x=>/Lien/.test(x.label))).length;
+  const cards=rows.map(v=>{
+    const reasons=agingReasons(v),age=daysSince(v.tow_date);
+    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="muted">'+esc(recordLabel(v.record_type||'tow'))+' · '+esc(v.record_type==='company_owned'?ownedLabel(v.owned_disposition):statusLabel(v.status))+' · '+age+' days</div><div class="alert-tags">'+reasons.map(r=>'<span class="alert-tag '+(r.urgent?'urgent':'')+'">'+esc(r.label)+'</span>').join('')+'</div></button>';
+  }).join('');
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Aging Alerts</div><p class="muted">Vehicles that have been in the yard a while or have a lien date approaching.</p><div class="alert-summary"><div class="stat"><strong>'+rows.length+'</strong><span>ALERT VEHICLES</span></div><div class="stat"><strong>'+old30+'</strong><span>30+ DAYS</span></div><div class="stat"><strong>'+lienDue+'</strong><span>LIEN DATES</span></div></div>'+(old60?'<div class="notice"><strong>'+old60+'</strong> vehicle'+(old60===1?' is':'s are')+' at 60+ days.</div>':'')+'<div style="margin-top:12px">'+(cards||'<div class="card muted">No aging alerts right now.</div>')+'</div>';
+}
+
+function notificationPublicUrl(v){return PUBLIC_TAG+'?token='+encodeURIComponent(v.qr_token);}
+function notificationBalance(v){const d=invoiceStored(v);return Math.max(0,genericMoney(d.total)-invoicePaidTotal(savedInvoicePayments(v)));}
+function notificationMessage(type,v){
+  const vehicle=title(v),link=notificationPublicUrl(v),pickup=v.yard_location||'Mike’s Cascade Towing',balance=notificationBalance(v);
+  if(type==='ready')return 'Mike’s Cascade Towing: Your '+vehicle+' is ready for pickup. Pickup location: '+pickup+'. Vehicle details: '+link;
+  if(type==='insurance')return 'Mike’s Cascade Towing: Status update for your '+vehicle+': we are currently awaiting insurance. Vehicle details: '+link;
+  if(type==='payment')return 'Mike’s Cascade Towing: Your '+vehicle+' currently has a balance of '+money(balance)+'. Vehicle details: '+link;
+  if(type==='lien')return 'Mike’s Cascade Towing: This is a status reminder regarding the '+vehicle+' currently in our yard. Please contact us regarding the vehicle record. Details: '+link;
+  return 'Mike’s Cascade Towing: Status update for your '+vehicle+': '+statusLabel(v.status)+'. Vehicle details: '+link;
+}
+function updateNotificationTemplate(){
+  if(!selected)return;
+  const t=val('notifyTemplate')||'status';
+  if(t!=='custom'&&el('notifyMessage'))el('notifyMessage').value=notificationMessage(t,selected);
+}
+function customerNotificationScreen(){
+  if(!selected)return;
+  const v=selected,defaultType=v.status==='awaiting_pickup'?'ready':v.status==='awaiting_insurance'?'insurance':(v.record_type==='lien_foreclosure'?'lien':'status');
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Customer Notification</div><p class="muted">Create a text-ready update with the public TowTag link included.</p><div class="card"><label class="small muted">MESSAGE TEMPLATE</label><select id="notifyTemplate" class="input" onchange="updateNotificationTemplate()"><option value="status">Status Update</option><option value="ready">Ready for Pickup</option><option value="insurance">Awaiting Insurance</option><option value="payment">Payment Due</option><option value="lien">Lien / Vehicle Record Reminder</option><option value="custom">Custom Message</option></select><input id="notifyPhone" class="input" inputmode="tel" placeholder="Customer phone (optional)"><textarea id="notifyMessage" class="input notify-preview" rows="8"></textarea><div class="quick-actions"><button class="btn" onclick="openCustomerMessage()">Open Messages</button><button class="btn secondary" onclick="shareCustomerMessage()">Share</button><button class="btn secondary" onclick="copyCustomerMessage()">Copy Message</button></div></div>';
+  el('notifyTemplate').value=defaultType;updateNotificationTemplate();
+}
+function customerMessageText(){return (val('notifyMessage')||'').trim();}
+async function copyCustomerMessage(){
+  const msg=customerMessageText();if(!msg)return;
+  try{await navigator.clipboard.writeText(msg);alert('Customer message copied.')}catch{prompt('Copy message:',msg)}
+}
+function openCustomerMessage(){
+  const msg=customerMessageText();if(!msg)return;
+  const phone=(val('notifyPhone')||'').replace(/[^\d+]/g,'');
+  const sep=/iPhone|iPad|iPod/i.test(navigator.userAgent)?'&':'?';
+  location.href='sms:'+encodeURIComponent(phone)+sep+'body='+encodeURIComponent(msg);
+}
+async function shareCustomerMessage(){
+  const msg=customerMessageText();if(!msg)return;
+  try{if(navigator.share)await navigator.share({title:'Mike’s Cascade Towing',text:msg});else await copyCustomerMessage()}catch(e){if(e?.name!=='AbortError')await copyCustomerMessage()}
+}
+
+const DAMAGE_ZONES=[
+  ['front_bumper','Front Bumper'],['hood','Hood'],['windshield','Windshield'],['roof','Roof'],
+  ['driver_front','Driver Front'],['passenger_front','Passenger Front'],['driver_rear','Driver Rear'],['passenger_rear','Passenger Rear'],
+  ['rear_trunk','Rear / Trunk'],['rear_bumper','Rear Bumper'],['interior','Interior'],['wheels_tires','Wheels / Tires'],['undercarriage','Undercarriage']
+];
+function damageData(v){return v&&v.damage_data&&typeof v.damage_data==='object'&&!Array.isArray(v.damage_data)?v.damage_data:{};}
+function damageZoneLabel(k){return DAMAGE_ZONES.find(x=>x[0]===k)?.[1]||k;}
+function damageSummaryCard(v){
+  if(!v||v.deleted_at)return '';
+  const d=damageData(v),zones=Array.isArray(d.zones)?d.zones:[];
+  if(!zones.length&&!d.notes)return '<div class="card"><div class="small muted">DAMAGE DIAGRAM</div><p class="muted">No damage areas marked.</p><button class="btn secondary" onclick="damageDiagramScreen()">Open Damage Diagram</button></div>';
+  return '<div class="card"><div class="small muted">DAMAGE DIAGRAM</div>'+(zones.length?'<div class="alert-tags">'+zones.map(z=>'<span class="alert-tag">'+esc(damageZoneLabel(z))+'</span>').join('')+'</div>':'')+(d.notes?'<div style="margin-top:10px">'+esc(d.notes)+'</div>':'')+'<button class="btn secondary" onclick="damageDiagramScreen()">Edit Damage Diagram</button></div>';
+}
+function damageButton(zone,label,active){return '<button type="button" class="damage-zone '+(active?'active':'')+'" data-zone="'+esc(zone)+'" onclick="toggleDamageZone(this)">'+esc(label)+'</button>';}
+function damageDiagramScreen(){
+  if(!selected)return;
+  const v=selected,d=damageData(v),set=new Set(Array.isArray(d.zones)?d.zones:[]);
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Damage Diagram</div><p class="muted">Tap every area with existing or observed damage. Tap again to clear it.</p><div class="card"><div class="damage-map"><div style="display:grid;gap:8px">'+damageButton('driver_front','Driver Front',set.has('driver_front'))+damageButton('driver_rear','Driver Rear',set.has('driver_rear'))+'</div><div class="damage-center">'+damageButton('front_bumper','Front Bumper',set.has('front_bumper'))+'<div class="damage-car">'+damageButton('hood','Hood',set.has('hood'))+damageButton('windshield','Windshield',set.has('windshield'))+damageButton('roof','Roof',set.has('roof'))+damageButton('rear_trunk','Rear / Trunk',set.has('rear_trunk'))+'</div>'+damageButton('rear_bumper','Rear Bumper',set.has('rear_bumper'))+'</div><div style="display:grid;gap:8px">'+damageButton('passenger_front','Passenger Front',set.has('passenger_front'))+damageButton('passenger_rear','Passenger Rear',set.has('passenger_rear'))+'</div></div><div class="damage-extra">'+damageButton('interior','Interior',set.has('interior'))+damageButton('wheels_tires','Wheels / Tires',set.has('wheels_tires'))+damageButton('undercarriage','Undercarriage',set.has('undercarriage'))+'</div><textarea id="damageDiagramNotes" class="input" rows="5" placeholder="Damage notes">'+esc(d.notes||'')+'</textarea><button class="btn" onclick="saveDamageDiagram()">Save Damage Diagram</button><button class="btn secondary" onclick="clearDamageDiagram()">Clear All Marks</button></div>';
+}
+function toggleDamageZone(btn){btn.classList.toggle('active');}
+function clearDamageDiagram(){document.querySelectorAll('.damage-zone.active').forEach(x=>x.classList.remove('active'));if(el('damageDiagramNotes'))el('damageDiagramNotes').value='';}
+async function saveDamageDiagram(){
+  if(!selected)return;
+  const zones=[...document.querySelectorAll('.damage-zone.active')].map(x=>x.dataset.zone).filter(Boolean);
+  const data={zones,notes:val('damageDiagramNotes')||'',updated_at:new Date().toISOString(),updated_by:staffMember?.display_name||user?.email||''},id=selected.id;
+  try{
+    await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({damage_data:data})});
+    await load();detail(id);alert('Damage diagram saved.');
+  }catch(e){alert('Damage diagram save failed: '+e.message)}
+}
+
+function csvCell(v){
+  const x=v==null?'':(typeof v==='object'?JSON.stringify(v):String(v));
+  return '"'+x.replace(/"/g,'""')+'"';
+}
+function rowsToCsv(headers,rows){return [headers.map(csvCell).join(','),...rows.map(r=>headers.map(h=>csvCell(r[h])).join(','))].join('\r\n');}
+function downloadExport(name,content,type='text/csv;charset=utf-8'){
+  const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function exportVehiclesCsv(){
+  const headers=['id','record_type','status','tow_date','year','make','model','color','plate','plate_state','vin','tow_number','agency','impound_type','yard_location','yard_spot','driver_name','release_at','released_to','invoice_number','invoice_total','amount_paid','balance_due','lien_status','lien_eligible_date','damage_zones','damage_notes','archived_at','deleted_at'];
+  const rows=vehicles.map(v=>{const d=invoiceStored(v),l=lienData(v),dam=damageData(v);return {
+    ...v,agency:agencyForVehicle(v)?.name||'',invoice_total:d.total||'',amount_paid:invoicePaidTotal(savedInvoicePayments(v)).toFixed(2),
+    balance_due:Math.max(0,genericMoney(d.total)-invoicePaidTotal(savedInvoicePayments(v))).toFixed(2),lien_status:l.status||'',lien_eligible_date:l.eligible_action_date||'',
+    damage_zones:(dam.zones||[]).map(damageZoneLabel).join('; '),damage_notes:dam.notes||''
+  };});
+  downloadExport('towtag-vehicles-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,rows));
+}
+function exportInvoicesCsv(){
+  const headers=['vehicle_id','vehicle','invoice_number','invoice_date','customer','invoice_total','deductions','amount_paid','balance_due','payment_count','last_payment_date'];
+  const rows=vehicles.filter(v=>v.invoice_number||Object.keys(invoiceStored(v)).length).map(v=>{const d=invoiceStored(v),p=savedInvoicePayments(v),paid=invoicePaidTotal(p);return {
+    vehicle_id:v.id,vehicle:title(v),invoice_number:v.invoice_number||'',invoice_date:d.generic_invoice_date||'',customer:d.generic_customer_name||'',invoice_total:d.total||'',
+    deductions:d.generic_deductions_total||'',amount_paid:paid.toFixed(2),balance_due:Math.max(0,genericMoney(d.total)-paid).toFixed(2),payment_count:p.length,last_payment_date:p.length?(p[p.length-1].date||''):''
+  };});
+  downloadExport('towtag-invoices-payments-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,rows));
+}
+function exportLiensCsv(){
+  const headers=['vehicle_id','vehicle','plate','tow_number','lien_status','opened_date','notice_sent_date','certified_tracking','eligible_action_date','sale_date','owner_notified','notes'];
+  const rows=vehicles.filter(v=>v.record_type==='lien_foreclosure'||Object.keys(lienData(v)).length).map(v=>{const l=lienData(v);return {vehicle_id:v.id,vehicle:title(v),plate:v.plate||'',tow_number:v.tow_number||'',lien_status:l.status||'',opened_date:l.opened_date||'',notice_sent_date:l.notice_sent_date||'',certified_tracking:l.certified_tracking||'',eligible_action_date:l.eligible_action_date||'',sale_date:l.sale_date||'',owner_notified:!!l.owner_notified,notes:l.notes||''};});
+  downloadExport('towtag-liens-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,rows));
+}
+function exportMediaManifest(){
+  const headers=['type','id','vehicle_id','file_name_or_caption','storage_path','document_type','created_at'];
+  const rows=[
+    ...photoRows.map(p=>({type:'photo',id:p.id,vehicle_id:p.vehicle_id,file_name_or_caption:p.caption||'',storage_path:p.storage_path||'',document_type:'',created_at:p.created_at||''})),
+    ...documentRows.map(d=>({type:'document',id:d.id,vehicle_id:d.vehicle_id,file_name_or_caption:d.file_name||'',storage_path:d.storage_path||'',document_type:d.document_type||'',created_at:d.created_at||''}))
+  ];
+  downloadExport('towtag-media-manifest-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,rows));
+}
+async function exportActivityCsv(){
+  let rows=[];try{rows=await api('/rest/v1/vehicle_activity?select=*&order=created_at.asc')}catch(e){alert('Activity export could not load: '+e.message);return}
+  const headers=['id','vehicle_id','vehicle','event_type','description','created_by','created_at'];
+  const mapped=(rows||[]).map(x=>({...x,vehicle:title(vehicles.find(v=>v.id===x.vehicle_id)||{})}));
+  downloadExport('towtag-activity-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,mapped));
+}
+async function exportFullBackup(){
+  let activity=[],staff=[];
+  try{activity=await api('/rest/v1/vehicle_activity?select=*&order=created_at.asc')}catch{}
+  try{const d=await adminStaffCall({action:'list'});staff=Array.isArray(d?.staff)?d.staff.map(x=>({user_id:x.user_id,email:x.email||'',display_name:x.display_name||'',role:x.role||'',active:!!x.active,created_at:x.created_at||''})):[]}catch{}
+  const backup={exported_at:new Date().toISOString(),source:'TowTag',version:'yard-ops-backup-2',vehicles,vehicle_photos:photoRows,vehicle_documents:documentRows,vehicle_activity:activity,agencies:agencyRows,staff_accounts:staff};
+  downloadExport('towtag-full-backup-'+invoiceDateValue(new Date())+'.json',JSON.stringify(backup,null,2),'application/json;charset=utf-8');
+}
+function exportCenter(){
+  if(staffMember?.role!=='admin'){alert('Admin access required.');return}
+  selected=null;
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Export TowTag</div><p class="muted">Download TowTag records for backup, reporting, or spreadsheets. Authentication passwords and login tokens are never included.</p><div class="card"><div class="small muted">FULL BACKUP</div><p class="muted">Vehicles, invoices, payments, lien data, damage diagrams, photo/document metadata, and agencies in one JSON file.</p><button class="btn" onclick="exportFullBackup()">Download Full TowTag Backup</button></div><div class="card"><div class="small muted">CSV EXPORTS</div><div class="export-grid"><button class="btn secondary" onclick="exportVehiclesCsv()">Vehicles CSV</button><button class="btn secondary" onclick="exportInvoicesCsv()">Invoices & Payments CSV</button><button class="btn secondary" onclick="exportLiensCsv()">Lien Tracker CSV</button><button class="btn secondary" onclick="exportActivityCsv()">Activity History CSV</button><button class="btn secondary" onclick="exportMediaManifest()">Photos & Documents Manifest</button></div></div><div class="notice">Photo and document files themselves are not embedded in the export; the backup includes their TowTag metadata and storage references.</div>';
 }
 
 const tag=new URLSearchParams(location.search).get('tag');
