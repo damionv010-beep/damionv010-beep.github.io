@@ -1899,9 +1899,51 @@ async function previewTowTagBackup(file){
   catch(e){pendingTowTagBackup=null;alert(e.message||'Backup could not be read.');}
 }
 async function restoreTowTagBackup(){
-  if(!isAdminRole()||!pendingTowTagBackup)return;const b=pendingTowTagBackup;if(!confirm('Restore / merge this TowTag backup?\n\nExisting vehicle records with the same IDs may be updated. Records not in the backup will NOT be deleted.'))return;
-  try{if(!await ensureSession())throw new Error('Sign in required');const r=await fetch(BASE+'/functions/v1/towtag-restore-backup',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({backup:b})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Restore failed');pendingTowTagBackup=null;await load();alert('TowTag backup restore completed. '+(d.vehicles||0)+' vehicle records merged. Photo/document files are available when their stored files still exist. Staff passwords were not changed.');exportCenter();}
-  catch(e){alert('Restore stopped: '+(e.message||e));}
+  if(!isAdminRole()||!pendingTowTagBackup)return;
+  const b=pendingTowTagBackup;
+  if(!confirm('Restore / merge this TowTag backup?\n\nExisting records with the same IDs may be updated. Records not in the backup will NOT be deleted. Staff logins and passwords will NOT be changed.'))return;
+  try{
+    if(!await ensureSession())throw new Error('Sign in required');
+    const vehicleKeys=['id','qr_token','agency_id','tow_date','year','make','model','color','plate','plate_state','vin','status','yard_location','notes','created_by','created_at','updated_at','impound_type','tow_number','driver_name','odometer','keys_status','yard_spot','condition_notes','property_notes','hold_type','hold_notes','release_at','released_to','release_id_checked','release_authorized_by','release_notes','record_type','owned_disposition','asking_price','disposition_amount','disposition_completed_at','owned_notes','equipment_type','used_dollies','recovery_performed','recovery_minutes','winching_performed','cleanup_performed','hazmat_cleanup','extra_labor','extra_labor_minutes','after_hours','scene_wait_minutes','billable_miles','other_billable_work','billing_notes','invoice_number','invoice_data','invoice_updated_at','archived_at','archived_by','deleted_at','deleted_by','release_signature_data','lien_data','damage_data','ops_data'];
+    const photoKeys=['id','vehicle_id','storage_path','caption','sort_order','created_by','created_at'];
+    const docKeys=['id','vehicle_id','storage_path','file_name','content_type','document_type','notes','uploaded_by','created_at'];
+    const activityKeys=['id','vehicle_id','event_type','description','created_by','created_at','actor_name'];
+    const pick=(row,keys)=>{const out={};if(!row||typeof row!=='object'||Array.isArray(row))return out;keys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(row,k))out[k]=row[k]});return out};
+    const chunks=(arr,n)=>{const out=[];for(let i=0;i<arr.length;i+=n)out.push(arr.slice(i,i+n));return out};
+    const upsert=async(table,rows)=>{if(!rows.length)return;await _towtagCoreApi('/rest/v1/'+table+'?on_conflict=id',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal,missing=default'},body:JSON.stringify(rows)});};
+    const warnings=[];
+    const agencyNameByOldId=new Map((Array.isArray(b.agencies)?b.agencies:[]).map(a=>[String(a.id||''),String(a.name||'').toUpperCase()]));
+    const agencyIdByName=new Map((agencyRows||[]).map(a=>[String(a.name||'').toUpperCase(),a.id]));
+    const validAgencyIds=new Set((agencyRows||[]).map(a=>String(a.id)));
+    let restoredVehicles=0;
+    for(const raw of b.vehicles||[]){
+      if(!raw?.id)continue;
+      const current=vehicles.find(v=>v.id===raw.id)||{};
+      const clean={};
+      vehicleKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(current,k))clean[k]=current[k];if(Object.prototype.hasOwnProperty.call(raw,k))clean[k]=raw[k];});
+      clean.id=raw.id;clean.created_by=null;clean.archived_by=null;clean.deleted_by=null;
+      if(clean.agency_id&&!validAgencyIds.has(String(clean.agency_id))){const name=agencyNameByOldId.get(String(clean.agency_id));clean.agency_id=name&&agencyIdByName.get(name)?agencyIdByName.get(name):null;}
+      await upsert('vehicles',[clean]);restoredVehicles++;
+    }
+    const restoredVehicleIds=new Set((b.vehicles||[]).map(v=>String(v?.id||'')).filter(Boolean));
+    const photos=(Array.isArray(b.vehicle_photos)?b.vehicle_photos:[]).filter(x=>x?.id&&x?.vehicle_id&&x?.storage_path&&(restoredVehicleIds.has(String(x.vehicle_id))||vehicles.some(v=>v.id===x.vehicle_id))).map(x=>{const y=pick(x,photoKeys);y.created_by=null;return y});
+    try{for(const part of chunks(photos,100))await upsert('vehicle_photos',part)}catch(e){warnings.push('Some photo metadata could not be restored: '+(e.message||e));}
+    const docs=(Array.isArray(b.vehicle_documents)?b.vehicle_documents:[]).filter(x=>x?.id&&x?.vehicle_id&&x?.storage_path&&x?.file_name&&(restoredVehicleIds.has(String(x.vehicle_id))||vehicles.some(v=>v.id===x.vehicle_id))).map(x=>{const y=pick(x,docKeys);y.uploaded_by=null;return y});
+    try{for(const part of chunks(docs,100))await upsert('vehicle_documents',part)}catch(e){warnings.push('Some document metadata could not be restored: '+(e.message||e));}
+    let restoredActivity=0;
+    const activity=(Array.isArray(b.vehicle_activity)?b.vehicle_activity:[]).filter(x=>x?.id&&x?.vehicle_id&&x?.event_type&&x?.description).map(x=>{const y=pick(x,activityKeys);y.created_by=null;return y});
+    try{
+      for(const part of chunks(activity,150)){
+        const ids=part.map(x=>x.id).filter(Boolean);
+        const existing=ids.length?await _towtagCoreApi('/rest/v1/vehicle_activity?select=id&id=in.('+ids.map(encodeURIComponent).join(',')+')'):[];
+        const have=new Set((existing||[]).map(x=>x.id));const missing=part.filter(x=>!have.has(x.id));
+        if(missing.length){await _towtagCoreApi('/rest/v1/vehicle_activity',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(missing)});restoredActivity+=missing.length;}
+      }
+    }catch(e){warnings.push('Some activity history could not be restored: '+(e.message||e));}
+    pendingTowTagBackup=null;await load();
+    alert('TowTag backup restore completed. '+restoredVehicles+' vehicle records merged.'+(warnings.length?'\n\nWarnings:\n• '+warnings.join('\n• '):'')+'\n\nPhoto/document files are available when their stored files still exist. Staff passwords were not changed.');
+    exportCenter();
+  }catch(e){alert('Restore stopped: '+(e.message||e));}
 }
 function exportCenter(){
   if(!isAdminRole()){alert('Admin access required.');return}
