@@ -2465,4 +2465,180 @@ function yardToolsScreen(){
 }
 </script>
 
+<!-- TowTag simplified UI patch v3 -->
+<style>
+/* TowTag simplified UI v3 */
+.home-clean-primary.single-action{grid-template-columns:1fr}
+.home-clean-primary.single-action .wide{grid-column:auto}
+.arrival-unknown-list{display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#3b2710;color:#ffd28a;font-size:10px;font-weight:850;vertical-align:middle}
+</style>
+<script>
+/* Keep one operating mode. Daily Ops remains available on every vehicle. */
+currentOpsMode=function(){return 'driver';};
+setOpsMode=function(){localStorage.setItem('towtag_ops_mode','driver');home();};
+localStorage.setItem('towtag_ops_mode','driver');
+
+function sortUnknownArrivalLast(rows){
+  return (rows||[]).map((v,i)=>({v,i})).sort((a,b)=>{
+    const au=a.v?.record_type!=='company_owned'&&!arrivalDateKnown(a.v);
+    const bu=b.v?.record_type!=='company_owned'&&!arrivalDateKnown(b.v);
+    if(au!==bu)return au?1:-1;
+    return a.i-b.i;
+  }).map(x=>x.v);
+}
+
+/* Remove the Driver Quick Tools card from Quick Intake, while keeping normal intake + arrival date. */
+const __towtagSimpleAddForm=addForm;
+addForm=function(notice=''){
+  __towtagSimpleAddForm(notice);
+  app.querySelectorAll('.card .small.muted').forEach(label=>{
+    if(label.textContent.trim()==='DRIVER QUICK TOOLS')label.closest('.card')?.remove();
+  });
+};
+
+/* Simplified opening screen: no Office mode, Dispatch, Needs Attention, Yard Finder or Morning Check. */
+home=function(){
+  selected=null;
+  const live=vehicles.filter(v=>!v.deleted_at);
+  const active=live.filter(v=>!v.archived_at);
+  const queuedCount=offlineIntakes().length;
+  const inToday=active.filter(v=>arrivalDateKnown(v)&&isToday(v.tow_date)).length;
+  const outToday=vehicles.filter(v=>isToday(v.release_at)).length;
+  const holds=active.filter(v=>v.hold_type&&v.hold_type!=='none').length;
+  const unknownDates=active.filter(v=>v.record_type!=='company_owned'&&!arrivalDateKnown(v)).length;
+  app.innerHTML=
+    '<div class="top home-clean-top"><div>'+BRAND_HTML+'<div class="muted home-clean-status">'+active.length+' active · '+holds+' holds'+(unknownDates?' · '+unknownDates+' unknown date'+(unknownDates===1?'':'s'):'')+'</div></div><button class="link home-clean-menu" onclick="homeMenuScreen()">Menu</button></div>'+ 
+    '<div class="home-clean-today">Today: '+inToday+' in · '+outToday+' out</div>'+ 
+    '<div class="home-clean-primary single-action"><button class="btn wide" onclick="addForm()">+ Quick Intake</button></div>'+ 
+    '<button class="btn secondary home-clean-tools" onclick="yardToolsScreen()">More / Yard Tools</button>'+ 
+    dueReminderBannerHtml()+
+    (queuedCount?'<button class="btn secondary" onclick="syncOfflineIntakes()">Sync '+queuedCount+' Saved Intake'+(queuedCount===1?'':'s')+'</button>':'')+
+    '<div class="home-clean-vehicles"><div class="home-clean-heading"><div class="small muted">VEHICLES</div></div><div class="home-clean-search"><input id="search" class="input" type="search" autocomplete="off" placeholder="Search plate, VIN, job #…" oninput="render(this.value)"><select id="homeFilterSelect" class="home-clean-filter" onchange="setHomeFilterSelect(this.value)"><option value="all">Active</option><option value="tow">Tows</option><option value="sale">For Sale</option><option value="scrap">Scrap</option><option value="archive">Archive</option><option value="trash">Trash</option></select></div><div id="list"></div></div>';
+  homeFilter='all';
+  render('');
+};
+
+/* Keep useful tools without separate Driver/Office tabs. Removed: Dispatch, Needs Attention, Yard Finder, Morning Yard Check. */
+yardToolsScreen=function(){
+  selected=null;
+  const notes=openShiftNotes().length;
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Yard Tools</div><p class="muted">Less-used tools, kept off the opening screen.</p>'+ 
+    '<div class="card"><div class="yard-tools-grid">'+
+      '<button class="btn secondary" onclick="shiftNotesScreen()">Shift Notes'+(notes?' ('+notes+')':'')+'</button>'+ 
+      '<button class="btn secondary" onclick="requestReminderAlerts()">Reminder Alerts</button>'+ 
+      '<button class="btn secondary" onclick="yardReport()">Yard Report</button>'+ 
+      '<button class="btn secondary" onclick="dailyCloseout()">Daily Closeout</button>'+ 
+      '<button class="btn secondary" onclick="printYardInventoryChecklist()">Print Yard Checklist</button>'+ 
+      '<button class="btn secondary" onclick="agingAlertsScreen()">Lien / Aging Alerts</button>'+ 
+      '<button class="btn secondary wide" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag QR</button>'+ 
+    '</div></div>'+recentStripHtml();
+};
+
+/* List ordering: known intake dates first, unknown intake dates always at the bottom. */
+render=function(q){
+  q=(q||'').trim().toLowerCase();
+  const globalSearch=!!q;
+  let rows=vehicles.filter(v=>!q||vehicleSearchText(v).includes(q)||JSON.stringify(opsData(v)).toLowerCase().includes(q));
+  if(!globalSearch){
+    if(homeFilter==='trash')rows=rows.filter(v=>!!v.deleted_at);
+    else if(homeFilter==='archive')rows=rows.filter(v=>!v.deleted_at&&!!v.archived_at);
+    else{
+      rows=rows.filter(v=>!v.deleted_at&&!v.archived_at);
+      if(homeFilter==='tow')rows=rows.filter(v=>(v.record_type||'tow')!=='company_owned');
+      if(homeFilter==='sale')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale');
+      if(homeFilter==='scrap')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap');
+    }
+  }
+  rows=sortUnknownArrivalLast(rows);
+  const target=el('list');if(!target)return;
+  const note=globalSearch?'<div class="search-all-note">Searching active + archived + trash records</div>':'';
+  target.innerHTML=note+(rows.map(v=>{
+    const o=opsData(v),owned=v.record_type==='company_owned';
+    const badge=v.deleted_at?'Trash':(v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):statusLabel(v.status)));
+    const p=standardPhotoProgress(v),warn=dailyAttentionReasons(v),unknown=!owned&&!arrivalDateKnown(v);
+    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+' '+(o.pinned?'<span class="pin-pill">PINNED</span>':'')+' '+(o.problem_flag?'<span class="flag-pill">FLAG</span>':'')+(unknown?'<span class="arrival-unknown-list">DATE UNKNOWN</span>':'')+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+(v.yard_spot?' · <b>'+esc(v.yard_spot)+'</b>':'')+'</div><div class="small muted" style="margin-top:7px">'+esc(badge)+(o.internal_job_number?' · '+esc(o.internal_job_number):'')+'</div><div class="small muted" style="margin-top:6px">Photos '+p.done+'/'+p.total+(warn.length?' · <span style="color:#ffd76a">⚠ '+warn.length+'</span>':'')+'</div>'+(o.critical_note?'<div class="small" style="color:#ffb8bf;margin-top:7px">'+esc(o.critical_note)+'</div>':'')+'</button>';
+  }).join('')||'<div class="card muted">No matching vehicles.</div>');
+};
+</script>
+
+
+<style>
+.vehicle-list-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;width:100%}
+.vehicle-list-thumb{width:72px;height:72px;border-radius:12px;border:1px solid var(--line);background:#101419;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:0 0 72px}
+.vehicle-list-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.vehicle-thumb-placeholder{font-size:11px;line-height:1.2;color:var(--muted);text-align:center;padding:6px;font-weight:700}
+.vehicle-list-main{min-width:0;text-align:left}
+.vehicle-list-main h3{margin:0 0 4px}
+@media(max-width:560px){
+  .vehicle-list-card{grid-template-columns:64px minmax(0,1fr);gap:10px}
+  .vehicle-list-thumb{width:64px;height:64px;flex-basis:64px}
+}
+</style>
+<script>
+const vehicleThumbUrlCache=window.vehicleThumbUrlCache||{};
+window.vehicleThumbUrlCache=vehicleThumbUrlCache;
+function vehicleThumbPhotoRow(v){
+  const rows=(typeof vehiclePhotoRows==='function'?vehiclePhotoRows(v):[]).slice();
+  if(!rows.length)return null;
+  const rank=cap=>({front:1,'driver side':2,'passenger side':3,rear:4,'vehicle photo':5,damage:6,interior:7}[String(cap||'').trim().toLowerCase()]||50);
+  rows.sort((a,b)=>rank(a.caption)-rank(b.caption)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  return rows[0]||null;
+}
+async function signVehicleThumb(path){
+  if(!path)return '';
+  if(vehicleThumbUrlCache[path])return vehicleThumbUrlCache[path];
+  const encoded=String(path).split('/').map(encodeURIComponent).join('/');
+  const r=await api('/storage/v1/object/sign/vehicle-photos/'+encoded,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({expiresIn:86400})});
+  let u=r?.signedURL||r?.signedUrl||r?.signed_url||'';
+  if(!u)return '';
+  if(u.startsWith('/storage/v1/'))u=BASE+u; else if(u.startsWith('/'))u=BASE+'/storage/v1'+u;
+  vehicleThumbUrlCache[path]=u;
+  return u;
+}
+async function hydrateVehicleListThumbs(rows){
+  const work=(rows||[]).slice(0,60).map(async v=>{
+    const photo=vehicleThumbPhotoRow(v);
+    if(!photo?.storage_path)return;
+    const img=app.querySelector('img[data-thumb-vehicle="'+v.id+'"]');
+    if(!img)return;
+    try{
+      const url=await signVehicleThumb(photo.storage_path);
+      if(url&&img){img.src=url;img.style.display='block';}
+    }catch(e){console.warn('Thumb failed',e)}
+  });
+  await Promise.all(work);
+}
+render=function(q){
+  q=(q||'').trim().toLowerCase();
+  const globalSearch=!!q;
+  let rows=vehicles.filter(v=>!q||vehicleSearchText(v).includes(q)||JSON.stringify(opsData(v)).toLowerCase().includes(q));
+  if(!globalSearch){
+    if(homeFilter==='trash')rows=rows.filter(v=>!!v.deleted_at);
+    else if(homeFilter==='archive')rows=rows.filter(v=>!v.deleted_at&&!!v.archived_at);
+    else{
+      rows=rows.filter(v=>!v.deleted_at&&!v.archived_at);
+      if(homeFilter==='tow')rows=rows.filter(v=>(v.record_type||'tow')!=='company_owned');
+      if(homeFilter==='sale')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale');
+      if(homeFilter==='scrap')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap');
+    }
+  }
+  rows=sortUnknownArrivalLast(rows);
+  const target=el('list');if(!target)return;
+  const note=globalSearch?'<div class="search-all-note">Searching active + archived + trash records</div>':'';
+  target.innerHTML=note+(rows.map(v=>{
+    const o=opsData(v),owned=v.record_type==='company_owned';
+    const badge=v.deleted_at?'Trash':(v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):statusLabel(v.status)));
+    const p=standardPhotoProgress(v),warn=dailyAttentionReasons(v),unknown=!owned&&!arrivalDateKnown(v);
+    const thumb=vehicleThumbPhotoRow(v);
+    const thumbHtml=thumb&&thumb.storage_path
+      ? '<div class="vehicle-list-thumb"><img data-thumb-vehicle="'+esc(v.id)+'" alt="Vehicle photo" style="display:none"><div class="vehicle-thumb-placeholder">Loading photo…</div></div>'
+      : '<div class="vehicle-list-thumb"><div class="vehicle-thumb-placeholder">No Photo</div></div>';
+    return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><div class="vehicle-list-card">'+thumbHtml+'<div class="vehicle-list-main"><h3>'+esc(title(v))+' '+(o.pinned?'<span class="pin-pill">PINNED</span>':'')+' '+(o.problem_flag?'<span class="flag-pill">FLAG</span>':'')+(unknown?'<span class="arrival-unknown-list">DATE UNKNOWN</span>':'')+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+(v.yard_spot?' · <b>'+esc(v.yard_spot)+'</b>':'')+'</div><div class="small muted" style="margin-top:7px">'+esc(badge)+(o.internal_job_number?' · '+esc(o.internal_job_number):'')+'</div><div class="small muted" style="margin-top:6px">Photos '+p.done+'/'+p.total+(warn.length?' · <span style="color:#ffd76a">⚠ '+warn.length+'</span>':'')+'</div>'+(o.critical_note?'<div class="small" style="color:#ffb8bf;margin-top:7px">'+esc(o.critical_note)+'</div>':'')+'</div></div></button>';
+  }).join('')||'<div class="card muted">No matching vehicles.</div>');
+  hydrateVehicleListThumbs(rows).then(()=>{
+    app.querySelectorAll('.vehicle-list-thumb').forEach(box=>{const img=box.querySelector('img');const ph=box.querySelector('.vehicle-thumb-placeholder');if(img&&img.getAttribute('src')&&ph)ph.remove();});
+  }).catch(()=>{});
+};
+</script>
+
 </body></html>
