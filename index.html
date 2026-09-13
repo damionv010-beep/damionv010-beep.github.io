@@ -98,13 +98,20 @@ button,input,select,textarea{font:inherit}.wrap{max-width:760px;margin:auto;min-
 /* TowTag simple tap-to-mark vehicle damage diagram */
 .damage-canvas{position:relative;width:100%;height:min(66vh,560px);min-height:430px;border:1px solid #3a4652;border-radius:18px;background:radial-gradient(circle at center,#1b222a 0,#101419 72%);overflow:hidden;touch-action:manipulation;cursor:crosshair;user-select:none;-webkit-user-select:none}.damage-svg{position:absolute;inset:5% 13%;display:flex;align-items:center;justify-content:center;pointer-events:none}.damage-svg svg{width:100%;height:100%;display:block}.damage-marker-layer{position:absolute;inset:0;pointer-events:none}.damage-marker{pointer-events:auto;position:absolute;transform:translate(-50%,-50%);width:42px;height:42px;border:0;background:transparent;color:#ff3038;font-size:42px;line-height:42px;font-weight:950;display:grid;place-items:center;padding:0;text-shadow:0 2px 4px rgba(0,0,0,.85);z-index:4}.damage-marker:active{transform:translate(-50%,-50%) scale(.88)}.damage-view-help{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 2px 2px}.damage-view-help strong{font-size:13px}.damage-view-help span{font-size:12px;color:var(--muted);text-align:right}.damage-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.damage-toolbar .btn{margin-top:0}.damage-summary-count{display:flex;align-items:baseline;gap:6px;margin-top:7px}.damage-summary-count strong{font-size:24px;color:#ff777f}.damage-summary-count span{color:var(--muted);font-size:12px}
 @media(max-width:560px){.damage-canvas{height:58vh;min-height:390px}.damage-svg{inset:4% 10%}.damage-marker{width:44px;height:44px;font-size:44px}.damage-toolbar{grid-template-columns:1fr 1fr}}
+
+
+/* TowTag Daily Ops Suite */
+.mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.mode-switch button{border:1px solid #3a4652;background:#101419;color:#dce3e9;border-radius:12px;padding:11px;font-weight:850}.mode-switch button.active{border-color:var(--green);background:#20320f;color:#cfffaa}.ops-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.ops-grid .btn{margin-top:0}.ops-wide{grid-column:1/-1}.ops-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.ops-stat{background:#101419;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.ops-stat strong{display:block;font-size:20px}.ops-stat span{display:block;color:var(--muted);font-size:10px;margin-top:3px}.critical-note{border:1px solid #84363c;background:#2a1518;color:#ffd1d5;border-radius:13px;padding:12px;margin:10px 0}.critical-note strong{display:block;color:#ff9da5;margin-bottom:4px}.workflow-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px}.workflow-step{flex:0 0 auto;border:1px solid #3a4652;background:#101419;color:#dce3e9;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:850}.workflow-step.active{border-color:var(--green);background:#20320f;color:#cfffaa}.check-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}.check-row input{width:21px;height:21px;accent-color:var(--green)}.mini-list{display:flex;flex-direction:column;gap:7px}.mini-item{background:#101419;border:1px solid var(--line);border-radius:11px;padding:10px}.flag-pill{display:inline-block;padding:4px 7px;border-radius:999px;background:#421a1e;color:#ffb8bf;font-size:11px;font-weight:900}.pin-pill{display:inline-block;padding:4px 7px;border-radius:999px;background:#28360f;color:#cfffaa;font-size:11px;font-weight:900}.due-pill{display:inline-block;padding:4px 7px;border-radius:999px;background:#4b3712;color:#ffd76a;font-size:11px;font-weight:900}.dispatch-board{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.dispatch-col{background:#101419;border:1px solid var(--line);border-radius:14px;padding:10px}.dispatch-col h3{font-size:13px;margin:0 0 8px}.dispatch-card{display:block;width:100%;text-align:left;border:1px solid #2f3944;background:#15191f;color:#fff;border-radius:10px;padding:9px;margin:7px 0}.photo-check{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}.photo-check div{border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center;font-size:11px}.photo-check .done{border-color:#426926;background:#162310;color:#cfffaa}.voice-box{border:1px dashed #46515d;border-radius:12px;padding:11px;margin:8px 0}.yard-spot-big{font-size:24px;font-weight:900;color:#cfffaa}.history-row{border-left:3px solid #394552;padding:8px 10px;margin:7px 0;background:#101419;border-radius:0 10px 10px 0}.history-row .who{font-weight:850;color:#cfffaa}.shift-note{border:1px solid var(--line);border-radius:12px;padding:11px;margin:8px 0;background:#101419}.shift-note.urgent{border-color:#7d2d35}.shift-note.important{border-color:#6c5721}.today-section{margin-top:14px}.ops-toolbar{display:flex;gap:8px;flex-wrap:wrap}.ops-toolbar .btn{width:auto;flex:1;min-width:120px}.recent-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:3px}.recent-card{flex:0 0 180px;border:1px solid var(--line);background:#101419;color:#fff;border-radius:12px;padding:10px;text-align:left}.reminder-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.inventory-boxes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.inventory-boxes label{background:#101419;border:1px solid var(--line);border-radius:10px;padding:9px;display:flex;gap:8px;align-items:center}.inventory-boxes input{width:19px;height:19px;accent-color:var(--green)}
+@media(max-width:560px){.ops-stat-grid{grid-template-columns:repeat(2,1fr)}.dispatch-board{grid-template-columns:1fr}.photo-check{grid-template-columns:repeat(2,1fr)}.ops-grid{grid-template-columns:1fr}.ops-wide{grid-column:auto}}
+
 </style>
 </head>
 <body><main class="wrap"><div id="app"></div></main>
 <script>
 const BASE='https://ckonxzprnxqlefxscudt.supabase.co';
 const KEY='sb_publishable_fQ-Cv2dhMlib6_16oh-WiQ_Ku96PhPp';
-const SITE='https://damionv010-beep.github.io/';
+const SITE='https://ckonxzprnxqlefxscudt.supabase.co/functions/v1/towtag-live';
+const AUTH_REDIRECT='https://damionv010-beep.github.io/';
 const PUBLIC_TAG='https://damionv010-beep.github.io/public.html';
 const INVOICE_BG='';
 let session=null,user=null,staffMember=null,vehicles=[],photoRows=[],documentRows=[],agencyRows=[],billingProfiles=[],selected=null,movePhotoId=null;
@@ -198,7 +205,7 @@ async function sendPasswordReset(){
   try{
     if(!email)throw new Error('Enter the account email.');
     localStorage.setItem('towtag_email',email);
-    const r=await fetch(BASE+'/auth/v1/recover?redirect_to='+encodeURIComponent(SITE),{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const r=await fetch(BASE+'/auth/v1/recover?redirect_to='+encodeURIComponent(AUTH_REDIRECT),{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
     let d={};try{d=await r.json()}catch{}
     if(!r.ok)throw new Error(d.msg||d.message||d.error_description||'Could not send reset email.');
     forgotPasswordScreen('<div class="notice">Reset email sent. Open the link in that email on this device, then choose a new password.</div>');
@@ -245,7 +252,7 @@ function createAccountScreen(msg=''){
 }
 async function callStaffJoin(displayName,staffCode){
   if(!session?.access_token)throw new Error('Sign in required.');
-  const r=await fetch(BASE+'/functions/v1/towtag-staff-join',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({displayName,staffCode})});
+  const r=await fetch(BASE+'/functions/v1/towtag-live?action=staff-join',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({displayName,staffCode})});
   const d=await r.json();
   if(!r.ok)throw new Error(d.error||'Could not activate TowTag access.');
   return d;
@@ -287,7 +294,7 @@ async function boot(){
     if(!m.length){staffJoinScreen();return}
     if(!m[0].active)throw new Error('This TowTag staff account is disabled.');
     staffMember=m[0];
-    await load(); home();
+    await load(); startReminderNotifier(); home();
   }catch(e){loginScreen('<div class="error">'+esc(e.message)+'</div>')}
 }
 function staffJoinScreen(msg=''){
@@ -307,7 +314,7 @@ async function activateStaffAccess(){
 async function load(){
   const [v,p,d,a]=await Promise.all([
     api('/rest/v1/vehicles?select=*&order=tow_date.desc'),
-    api('/rest/v1/vehicle_photos?select=id,vehicle_id,caption,created_at&order=created_at.asc'),
+    api('/rest/v1/vehicle_photos?select=id,vehicle_id,storage_path,caption,sort_order,created_by,created_at&order=created_at.asc'),
     api('/rest/v1/vehicle_documents?select=id,vehicle_id,storage_path,file_name,content_type,document_type,notes,created_at&order=created_at.desc'),
     api('/rest/v1/agencies?select=*&order=name')
   ]);
@@ -349,6 +356,8 @@ let homeFilter='all';
 const el=id=>document.getElementById(id);
 const val=id=>(el(id)?.value||'').trim();
 const checked=id=>!!el(id)?.checked;
+const isOwnerRole=()=>staffMember?.role==='owner';
+const isAdminRole=()=>staffMember?.role==='admin'||staffMember?.role==='owner';
 const pref=(key,fallback='')=>localStorage.getItem('towtag_'+key)||fallback;
 const money=v=>v===null||v===undefined||v===''?'—':'$'+Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const recordLabel=v=>({
@@ -629,7 +638,7 @@ function home(){
   const saleCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale').length;
   const scrapCount=active.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap').length;
   const alertCount=agingAlertVehicles().length;
-  const adminButton=staffMember?.role==='admin'?'<button class="link" onclick="adminStaffScreen()">Staff</button><button class="link" onclick="exportCenter()">Export</button>':'';
+  const adminButton=isAdminRole()?'<button class="link" onclick="adminStaffScreen()">Staff</button><button class="link" onclick="exportCenter()">Export</button>':'';
   app.innerHTML='<div class="top"><div>'+BRAND_HTML+'<div class="muted small">'+active.length+' active · '+towCount+' tow yard · '+saleCount+' for sale · '+scrapCount+' scrap · '+archivedCount+' archived · '+trashCount+' trash'+(queuedCount?' · '+queuedCount+' waiting to sync':'')+'</div></div><div style="display:flex;gap:12px">'+adminButton+'<button class="link" onclick="logout()">Sign Out</button></div></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="yardReport()">Yard Report</button><button class="btn secondary" onclick="agingAlertsScreen()">Aging Alerts'+(alertCount?' ('+alertCount+')':'')+'</button><button class="btn secondary" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag</button></div>'+
   (queuedCount?'<button class="btn secondary" onclick="syncOfflineIntakes()">Sync '+queuedCount+' Saved Intake'+(queuedCount===1?'':'s')+'</button>':'')+
@@ -852,7 +861,7 @@ function detail(id){
   '<div class="card" id="vehicleMediaCard" style="text-align:center"><img class="qr" src="'+qr+'"><div class="small muted">Scan with any phone camera</div><input id="cameraPhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotos(this.files)"><input id="libraryPhoto" type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(this.files)">'+
   '<div class="small muted" style="margin-top:14px">QUICK PHOTO CHECKLIST</div><div class="choice-grid photo-choices" style="grid-template-columns:repeat(3,1fr)"><button class="choice" onclick="takeLabeledPhoto(\'Front\')">Front</button><button class="choice" onclick="takeLabeledPhoto(\'Rear\')">Rear</button><button class="choice" onclick="takeLabeledPhoto(\'Driver side\')">Driver Side</button><button class="choice" onclick="takeLabeledPhoto(\'Passenger side\')">Passenger Side</button><button class="choice" onclick="takeLabeledPhoto(\'Interior\')">Interior</button><button class="choice" onclick="takeLabeledPhoto(\'Damage\')">Damage</button></div>'+ 
   '<div class="small muted" style="margin-top:12px">PHOTO LABEL</div><select id="photoCaption" class="input"><option value="Vehicle photo">General Photo</option><option value="Front">Front</option><option value="Rear">Rear</option><option value="Driver side">Driver Side</option><option value="Passenger side">Passenger Side</option><option value="Interior">Interior</option><option value="Damage">Damage</option><option value="VIN">VIN</option><option value="Odometer">Odometer</option><option value="Personal property">Personal Property</option></select>'+(!v.deleted_at?'<div class="row"><button class="btn" onclick="cameraPhoto.click()">Take Photo</button><button class="btn secondary" onclick="libraryPhoto.click()">Choose From Photos</button></div>':'<div class="notice">Restore this vehicle from Trash before adding photos.</div>')+'<div id="staffPhotos" class="photos" style="margin-top:12px"></div>'+(!v.deleted_at?'<div class="row"><button class="btn secondary" onclick="location.href=\''+publicUrl+'\'">Open Public Tag</button><button class="btn secondary" onclick="shareTag()">Share</button></div>':'')+'</div>'+ 
-  archiveCard+(v.deleted_at?(staffMember?.role==='admin'?'<div class="card"><div class="small muted">PERMANENT DELETE</div><p class="muted">Only use this after you are sure the vehicle should never be recovered.</p><button class="btn danger" onclick="deleteVehicle()">Delete Permanently</button></div>':'<div class="card"><div class="small muted">ADMIN REQUIRED</div><p class="muted">Only an Admin can permanently delete a vehicle. You can still restore it from Trash.</p></div>'):'<div class="card"><div class="small muted">TRASH</div><p class="muted">Removes this vehicle from normal TowTag use without destroying the record. You can restore it later.</p><button class="btn danger" onclick="trashVehicle()">Move Vehicle to Trash</button></div>');
+  archiveCard+(v.deleted_at?(isAdminRole()?'<div class="card"><div class="small muted">PERMANENT DELETE</div><p class="muted">Only use this after you are sure the vehicle should never be recovered.</p><button class="btn danger" onclick="deleteVehicle()">Delete Permanently</button></div>':'<div class="card"><div class="small muted">ADMIN REQUIRED</div><p class="muted">Only an Admin can permanently delete a vehicle. You can still restore it from Trash.</p></div>'):'<div class="card"><div class="small muted">TRASH</div><p class="muted">Removes this vehicle from normal TowTag use without destroying the record. You can restore it later.</p><button class="btn danger" onclick="trashVehicle()">Move Vehicle to Trash</button></div>');
   loadStaffPhotos(v.qr_token);
   renderVehicleDocuments(v.id);
   setTimeout(initReleaseSignature,0);
@@ -1123,11 +1132,16 @@ async function printTowSheet(){
       ['Released',new Date(v.release_at).toLocaleString()],['Released To',v.released_to||'—'],['ID Checked',v.release_id_checked?'Yes':'No'],
       ['Authorized By',v.release_authorized_by||'—'],['Release Notes',v.release_notes||'—']
     ]:[];
+    const damagePoints=damagePointList(damageData(v));
+    const damageHtml='<h2>Damage Diagram</h2>'+(damagePoints.length
+      ?'<div class="damage-print-wrap"><div class="damage-print-canvas"><div class="damage-print-svg">'+damageVehicleSvg()+'</div><div class="damage-print-markers">'+damagePoints.map(p=>'<span class="damage-print-mark" style="left:'+Number(p.x).toFixed(3)+'%;top:'+Number(p.y).toFixed(3)+'%">×</span>').join('')+'</div></div><div class="damage-print-meta">'+damagePoints.length+' X mark'+(damagePoints.length===1?'':'s')+' saved</div></div>'
+      :'<div class="muted-inline">No damage marked.</div>');
     const photoHtml=photos.length?'<h2>Photos</h2><div class="photos">'+photos.map(p=>'<div><img src="'+printEscape(p.url)+'"><div class="cap">'+printEscape(p.caption||'Vehicle photo')+'</div></div>').join('')+'</div>':'';
-    const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+printEscape(vehicleName)+' — TowTag</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0;background:#f3f3f3}.toolbar{position:sticky;top:0;z-index:20;background:#111;padding:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.toolbar button{border:0;border-radius:999px;padding:11px 18px;font-weight:700}.toolbar .back{background:#333;color:#fff}.sheet{background:#fff;max-width:900px;margin:0 auto;padding:24px}h1{margin:0}h2{font-size:16px;margin:24px 0 8px;border-bottom:2px solid #111;padding-bottom:5px}.sub{color:#555;margin-top:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}.item{padding:6px 0;border-bottom:1px solid #ddd}.label{font-size:10px;color:#666;text-transform:uppercase;display:block}.billing div{padding:5px 0}.photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}.photos img{width:100%;max-height:240px;object-fit:contain;border:1px solid #ccc}.cap{font-size:11px;color:#555}.foot{margin-top:28px;font-size:10px;color:#666}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:12mm}}</style></head><body><div class="toolbar"><button class="back" onclick="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{history.back()}">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet">'+
+    const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+printEscape(vehicleName)+' — TowTag</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;margin:0;background:#f3f3f3}.toolbar{position:sticky;top:0;z-index:20;background:#111;padding:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.toolbar button{border:0;border-radius:999px;padding:11px 18px;font-weight:700}.toolbar .back{background:#333;color:#fff}.sheet{background:#fff;max-width:900px;margin:0 auto;padding:24px}h1{margin:0}h2{font-size:16px;margin:24px 0 8px;border-bottom:2px solid #111;padding-bottom:5px}.sub{color:#555;margin-top:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}.item{padding:6px 0;border-bottom:1px solid #ddd}.label{font-size:10px;color:#666;text-transform:uppercase;display:block}.billing div{padding:5px 0}.photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}.photos img{width:100%;max-height:240px;object-fit:contain;border:1px solid #ccc}.cap{font-size:11px;color:#555}.muted-inline{color:#555}.damage-print-wrap{margin-top:10px}.damage-print-canvas{position:relative;width:min(100%,340px);height:520px;border:1px solid #c8ced6;border-radius:18px;background:linear-gradient(180deg,#f7f9fb 0,#eef2f6 100%);overflow:hidden}.damage-print-svg{position:absolute;inset:5% 13%;display:flex;align-items:center;justify-content:center}.damage-print-svg svg{width:100%;height:100%;display:block}.damage-print-markers{position:absolute;inset:0}.damage-print-mark{position:absolute;transform:translate(-50%,-50%);color:#d11822;font-size:34px;line-height:1;font-weight:900;text-shadow:0 1px 2px rgba(255,255,255,.7)}.damage-print-meta{font-size:12px;color:#555;margin-top:8px}.foot{margin-top:28px;font-size:10px;color:#666}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:12mm}.damage-print-canvas{width:280px;height:430px}.damage-print-mark{font-size:28px}}</style></head><body><div class="toolbar"><button class="back" onclick="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{history.back()}">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet">'+
       '<h1>Mike’s Cascade Towing Yard</h1><div class="sub">TowTag Vehicle Sheet · '+printEscape(vehicleName)+'</div>'+
       '<h2>Vehicle / Record</h2><div class="grid">'+fields.map(x=>'<div class="item"><span class="label">'+printEscape(x[0])+'</span>'+printEscape(x[1])+'</div>').join('')+'</div>'+
       (extra.length?'<h2>Notes</h2><div class="grid">'+extra.map(x=>'<div class="item"><span class="label">'+printEscape(x[0])+'</span>'+printEscape(x[1])+'</div>').join('')+'</div>':'')+
+      damageHtml+
       (billing.length||v.billing_notes?'<h2>Billing Summary</h2><div class="billing">'+billing.map(x=>'<div>• '+printEscape(x)+'</div>').join('')+(v.billing_notes?'<div><strong>Billing notes:</strong> '+printEscape(v.billing_notes)+'</div>':'')+'</div>':'')+
       (release.length?'<h2>Release Record</h2><div class="grid">'+release.map(x=>'<div class="item"><span class="label">'+printEscape(x[0])+'</span>'+printEscape(x[1])+'</div>').join('')+'</div>'+(v.release_signature_data?'<div style="margin-top:12px"><span class="label">Release Signature</span><img src="'+printEscape(v.release_signature_data)+'" style="width:320px;max-width:100%;border:1px solid #bbb;background:#fff"></div>':''):'')+
       photoHtml+'<div class="foot">TowTag · '+printEscape(v.qr_token)+'</div></div></body></html>';
@@ -1184,8 +1198,8 @@ async function deleteVehicleDocument(id){
 async function loadActivity(id){
   const target=el('activity'); if(!target)return;
   try{
-    const rows=await api('/rest/v1/vehicle_activity?select=event_type,description,created_at&vehicle_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=50');
-    target.innerHTML=(rows||[]).map(r=>'<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div>'+esc(r.description)+'</div><div class="small muted" style="margin-top:3px">'+esc(new Date(r.created_at).toLocaleString())+'</div></div>').join('')||'<div class="muted">No activity recorded yet.</div>';
+    const rows=await api('/rest/v1/vehicle_activity?select=event_type,description,actor_name,created_by,created_at&vehicle_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=50');
+    target.innerHTML=(rows||[]).map(r=>'<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div>'+esc(r.description)+'</div><div class="small muted" style="margin-top:3px">'+esc(r.actor_name||'Staff')+' · '+esc(new Date(r.created_at).toLocaleString())+'</div></div>').join('')||'<div class="muted">No activity recorded yet.</div>';
   }catch(e){target.innerHTML='<div class="error">History failed to load: '+esc(e.message)+'</div>'}
 }
 async function loadStaffPhotos(token){
@@ -1212,7 +1226,7 @@ async function moveVehiclePhoto(photoId,targetVehicleId){
   if(!confirm('Move this photo from '+title(selected)+' to '+title(target)+'?'))return;
   try{
     if(!await ensureSession())throw new Error('Sign in required');
-    const r=await fetch(BASE+'/functions/v1/towtag-move-photo',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({photoId,targetVehicleId})});
+    const r=await fetch(BASE+'/functions/v1/towtag-live?action=photo-move',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({photoId,targetVehicleId})});
     const d=await r.json();if(!r.ok)throw new Error(d.error||'Photo move failed');
     await load(); selected=vehicles.find(v=>v.id===sourceId); detail(sourceId); alert('Photo moved to '+title(target)+'.');
   }catch(e){alert('Could not move photo: '+e.message)}
@@ -1223,7 +1237,7 @@ async function deleteVehiclePhoto(photoId){
   if(!confirm('Delete this photo from '+title(selected)+'?\n\nOnly this photo will be removed. The vehicle record will stay intact.'))return;
   try{
     if(!await ensureSession())throw new Error('Sign in required');
-    const r=await fetch(BASE+'/functions/v1/towtag-delete-photo',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({photoId,vehicleId:selected.id})});
+    const r=await fetch(BASE+'/functions/v1/towtag-live?action=photo-delete',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({photoId,vehicleId:selected.id})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||'Photo delete failed');
     const id=selected.id; await load(); selected=vehicles.find(v=>v.id===id); await loadStaffPhotos(selected.qr_token);
     alert('Photo deleted.');
@@ -1290,7 +1304,7 @@ async function restoreTrashedVehicle(){
 
 async function deleteVehicle(){
   if(!selected)return;
-  if(staffMember?.role!=='admin'){alert('Admin access is required for permanent deletion.');return}
+  if(!isAdminRole()){alert('Admin access is required for permanent deletion.');return}
   if(!selected.deleted_at){alert('Move the vehicle to Trash before permanently deleting it.');return}
   const vehicleName=title(selected); if(!confirm('PERMANENTLY delete '+vehicleName+' from TowTag?\n\nThis removes the vehicle record and its photos. This cannot be undone.'))return;
   try{
@@ -1326,13 +1340,13 @@ async function shareTag(){
 }
 function rateInput(id,label,value){return '<label class="small muted">'+label+'</label><input id="'+id+'" class="input" inputmode="decimal" placeholder="0.00" value="'+esc(value??'')+'">'}
 function agencyManagementScreen(){
-  selected=null; const admin=staffMember?.role==='admin';
+  selected=null; const admin=isAdminRole();
   app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Agency Directory</div><p class="muted">Contacts and agency-specific invoice rates. Rates are only used for the matching agency and remain editable on each invoice.</p>'+
   (admin?'<button class="btn" onclick="agencyEditScreen()">+ Add Agency</button>':'')+
   (agencyRows.map(a=>{const p=billingProfiles.find(x=>x.agency_id===a.id);return '<button class="vehicle" onclick="agencyEditScreen(\''+a.id+'\')"><h3>'+esc(a.name)+'</h3><div class="muted">'+esc(a.phone||a.records_phone||a.email||'No contact information')+'</div><div class="small muted" style="margin-top:6px">'+(p?'Billing profile ready':'No billing profile')+'</div></button>'}).join('')||'<div class="card muted">No agencies saved yet.</div>');
 }
 function agencyEditScreen(id=null){
-  const a=id?agencyRows.find(x=>x.id===id):null,p=id?billingProfiles.find(x=>x.agency_id===id):null; const admin=staffMember?.role==='admin';
+  const a=id?agencyRows.find(x=>x.id===id):null,p=id?billingProfiles.find(x=>x.agency_id===id):null; const admin=isAdminRole();
   if(!admin&&id===null){alert('Admin access required.');return}
   const readonly=admin?'':'readonly';
   app.innerHTML='<button class="link" onclick="agencyManagementScreen()">‹ Agencies</button><div class="h1">'+esc(a?.name||'New Agency')+'</div>'+(!admin?'<div class="notice">Only an Admin can change agency contacts or rates.</div>':'')+
@@ -1344,7 +1358,7 @@ function agencyEditScreen(id=null){
 }
 function nullableMoney(id){const x=val(id);if(!x)return null;const n=Number(x.replace(/[$,]/g,''));return Number.isFinite(n)?n:null}
 async function saveAgencyProfile(existingId=''){
-  if(staffMember?.role!=='admin'){alert('Admin access required.');return}
+  if(!isAdminRole()){alert('Admin access required.');return}
   try{
     const name=val('agencyNameEdit');if(!name)throw new Error('Agency name is required.');
     let id=existingId; const agencyBody={name,contact_name:val('agencyContactEdit')||null,phone:val('agencyPhoneEdit')||null,records_phone:val('agencyRecordsPhoneEdit')||null,email:val('agencyEmailEdit')||null,notes:val('agencyNotesEdit')||null,updated_at:new Date().toISOString()};
@@ -1369,11 +1383,12 @@ async function adminStaffCall(payload){
 }
 function staffRowsHtml(rows){
   if(!Array.isArray(rows)||!rows.length)return '<div class="card muted">No staff accounts found.</div>';
+  const ownerExists=rows.some(s=>s.role==='owner'&&s.active);
   return rows.map((s,i)=>{
     try{
       const self=s.user_id===user?.id;
       return '<div class="staff-row"><div style="font-weight:850">'+esc(s.display_name||'Unnamed staff')+(self?' <span class="pill">You</span>':'')+'</div><div class="email">'+esc(s.email||'Email unavailable')+'</div>'+ 
-      '<input id="staffName_'+i+'" class="input" placeholder="Display name" value="'+esc(s.display_name||'')+'"><div class="row"><select id="staffRole_'+i+'" class="input"><option value="driver" '+(s.role!=='admin'?'selected':'')+'>Driver</option><option value="admin" '+(s.role==='admin'?'selected':'')+'>Admin</option></select><label class="toggle" style="margin:5px 0 10px"><input id="staffActive_'+i+'" type="checkbox" '+(s.active?'checked':'')+'> Active access</label></div>'+ 
+      '<input id="staffName_'+i+'" class="input" placeholder="Display name" value="'+esc(s.display_name||'')+'"><div class="row"><select id="staffRole_'+i+'" class="input"><option value="driver" '+(s.role==='driver'?'selected':'')+'>Driver</option><option value="admin" '+(s.role==='admin'?'selected':'')+'>Admin</option>'+((isOwnerRole()||!ownerExists||s.role==='owner')?'<option value="owner" '+(s.role==='owner'?'selected':'')+'>Owner</option>':'')+'</select><label class="toggle" style="margin:5px 0 10px"><input id="staffActive_'+i+'" type="checkbox" '+(s.active?'checked':'')+'> Active access</label></div>'+ 
       '<button class="btn secondary" onclick="saveStaffAccount(\''+esc(s.user_id)+'\','+i+')">Save Staff Access</button>'+ 
       '<details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:800;color:#baff83">Password & account tools</summary><div style="margin-top:10px"><label class="small muted">SET NEW PASSWORD</label><div style="position:relative"><input id="staffPassword_'+i+'" class="input" style="padding-right:78px" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button id="showStaffPw_'+i+'" type="button" onclick="togglePassword(\'staffPassword_'+i+'\',\'showStaffPw_'+i+'\')" style="position:absolute;right:8px;top:10px;border:0;background:transparent;color:#8dff3f;font-weight:800;padding:10px">Show</button></div>'+ 
       '<button class="btn secondary" onclick="setStaffPassword(\''+esc(s.user_id)+'\','+i+')">Set New Password</button>'+ 
@@ -1384,7 +1399,7 @@ function staffRowsHtml(rows){
   }).join('');
 }
 async function adminStaffScreen(){
-  if(staffMember?.role!=='admin'){alert('Admin access required.');return}
+  if(!isAdminRole()){alert('Admin access required.');return}
   app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">Staff Accounts</div><div class="card muted">Loading staff…</div>';
   try{
     const d=await adminStaffCall({action:'list'}),rows=Array.isArray(d.staff)?d.staff:[];
@@ -1862,22 +1877,383 @@ function exportMediaManifest(){
 }
 async function exportActivityCsv(){
   let rows=[];try{rows=await api('/rest/v1/vehicle_activity?select=*&order=created_at.asc')}catch(e){alert('Activity export could not load: '+e.message);return}
-  const headers=['id','vehicle_id','vehicle','event_type','description','created_by','created_at'];
+  const headers=['id','vehicle_id','vehicle','event_type','description','actor_name','created_by','created_at'];
   const mapped=(rows||[]).map(x=>({...x,vehicle:title(vehicles.find(v=>v.id===x.vehicle_id)||{})}));
   downloadExport('towtag-activity-'+invoiceDateValue(new Date())+'.csv',rowsToCsv(headers,mapped));
 }
+function utf8ToBase64(text){const bytes=new TextEncoder().encode(text);let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(binary);}
+function base64ToUtf8(value){const binary=atob(String(value||'').replace(/\s/g,'')),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new TextDecoder().decode(bytes);}
+function encodeTowTagBackup(backup){return 'TOWTAG-BACKUP-V2\n'+utf8ToBase64(JSON.stringify(backup));}
+function decodeTowTagBackup(raw){raw=String(raw||'').trim();if(raw.startsWith('TOWTAG-BACKUP-V2'))return JSON.parse(base64ToUtf8(raw.split(/\n/).slice(1).join('')));return JSON.parse(raw);}
 async function exportFullBackup(){
   let activity=[],staff=[];
   try{activity=await api('/rest/v1/vehicle_activity?select=*&order=created_at.asc')}catch{}
   try{const d=await adminStaffCall({action:'list'});staff=Array.isArray(d?.staff)?d.staff.map(x=>({user_id:x.user_id,email:x.email||'',display_name:x.display_name||'',role:x.role||'',active:!!x.active,created_at:x.created_at||''})):[]}catch{}
-  const backup={exported_at:new Date().toISOString(),source:'TowTag',version:'yard-ops-backup-2',vehicles,vehicle_photos:photoRows,vehicle_documents:documentRows,vehicle_activity:activity,agencies:agencyRows,staff_accounts:staff};
-  downloadExport('TowTag-Backup-'+invoiceDateValue(new Date())+'.towtag',JSON.stringify(backup),'application/octet-stream');
+  const backup={exported_at:new Date().toISOString(),source:'TowTag',version:'yard-ops-backup-3',vehicles,vehicle_photos:photoRows,vehicle_documents:documentRows,vehicle_activity:activity,agencies:agencyRows,staff_accounts:staff};
+  downloadExport('TowTag-Backup-'+invoiceDateValue(new Date())+'.towtag',encodeTowTagBackup(backup),'application/octet-stream');
+}
+let pendingTowTagBackup=null;
+function chooseTowTagBackup(){const i=el('restoreTowTagBackupInput');if(i){i.value='';i.click();}}
+async function previewTowTagBackup(file){
+  if(!file)return;try{const raw=await file.text(),b=decodeTowTagBackup(raw);if(b?.source!=='TowTag'||!Array.isArray(b.vehicles))throw new Error('This is not a valid TowTag backup.');pendingTowTagBackup=b;const box=el('backupRestorePreview');if(box)box.innerHTML='<div class="notice"><b>Backup ready:</b> '+b.vehicles.length+' vehicles · '+(b.vehicle_photos?.length||0)+' photo records · '+(b.vehicle_documents?.length||0)+' documents · '+(b.vehicle_activity?.length||0)+' history entries.<br><br>Restore merges records by ID. It does not delete records that are not in the backup and it never changes login passwords.</div><button class="btn danger" onclick="restoreTowTagBackup()">Restore / Merge This Backup</button>';}
+  catch(e){pendingTowTagBackup=null;alert(e.message||'Backup could not be read.');}
+}
+async function restoreTowTagBackup(){
+  if(!isAdminRole()||!pendingTowTagBackup)return;const b=pendingTowTagBackup;if(!confirm('Restore / merge this TowTag backup?\n\nExisting vehicle records with the same IDs may be updated. Records not in the backup will NOT be deleted.'))return;
+  try{if(!await ensureSession())throw new Error('Sign in required');const r=await fetch(BASE+'/functions/v1/towtag-restore-backup',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({backup:b})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Restore failed');pendingTowTagBackup=null;await load();alert('TowTag backup restore completed. '+(d.vehicles||0)+' vehicle records merged. Photo/document files are available when their stored files still exist. Staff passwords were not changed.');exportCenter();}
+  catch(e){alert('Restore stopped: '+(e.message||e));}
 }
 function exportCenter(){
-  if(staffMember?.role!=='admin'){alert('Admin access required.');return}
+  if(!isAdminRole()){alert('Admin access required.');return}
   selected=null;
-  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Export TowTag</div><p class="muted">Save a complete TowTag backup or download records you can open in a spreadsheet. Authentication passwords and login tokens are never included.</p><div class="card"><div class="small muted">TOWTAG BACKUP</div><p class="muted">Creates one <b>.towtag</b> backup file containing vehicles, invoices, payments, lien data, damage diagrams, photo/document metadata, agencies, activity history, and staff account metadata.</p><div class="notice">This is a backup file, not a document. Save it in Files or cloud storage instead of opening it. Use the CSV exports below when you want something readable.</div><button class="btn" onclick="exportFullBackup()">Save Full TowTag Backup</button></div><div class="card"><div class="small muted">READABLE CSV EXPORTS</div><p class="muted small">These open normally in Numbers, Excel, Google Sheets, or other spreadsheet apps.</p><div class="export-grid"><button class="btn secondary" onclick="exportVehiclesCsv()">Vehicles CSV</button><button class="btn secondary" onclick="exportInvoicesCsv()">Invoices & Payments CSV</button><button class="btn secondary" onclick="exportLiensCsv()">Lien Tracker CSV</button><button class="btn secondary" onclick="exportActivityCsv()">Activity History CSV</button><button class="btn secondary" onclick="exportMediaManifest()">Photos & Documents Manifest</button></div></div><div class="notice">Photo and document files themselves are not embedded in the export; the backup includes their TowTag metadata and storage references.</div>';
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Export TowTag</div><p class="muted">Save a complete TowTag backup or download records you can open in a spreadsheet. Authentication passwords and login tokens are never included.</p><div class="card"><div class="small muted">TOWTAG BACKUP</div><p class="muted">Creates one <b>.towtag</b> backup file containing vehicles, invoices, payments, lien data, damage diagrams, photo/document metadata, agencies, activity history, and staff account metadata.</p><div class="notice">This is a backup file, not a document. Save it in Files or cloud storage instead of opening it. Use the CSV exports below when you want something readable.</div><button class="btn" onclick="exportFullBackup()">Save Full TowTag Backup</button></div><div class="card"><div class="small muted">RESTORE BACKUP</div><p class="muted">Admin / Owner only. Preview a .towtag file, then merge it back into TowTag without deleting records that are not in the backup.</p><input id="restoreTowTagBackupInput" type="file" accept=".towtag,application/json,application/octet-stream" style="display:none" onchange="previewTowTagBackup(this.files?.[0])"><button class="btn secondary" onclick="chooseTowTagBackup()">Choose TowTag Backup</button><div id="backupRestorePreview"></div></div><div class="card"><div class="small muted">READABLE CSV EXPORTS</div><p class="muted small">These open normally in Numbers, Excel, Google Sheets, or other spreadsheet apps.</p><div class="export-grid"><button class="btn secondary" onclick="exportVehiclesCsv()">Vehicles CSV</button><button class="btn secondary" onclick="exportInvoicesCsv()">Invoices & Payments CSV</button><button class="btn secondary" onclick="exportLiensCsv()">Lien Tracker CSV</button><button class="btn secondary" onclick="exportActivityCsv()">Activity History CSV</button><button class="btn secondary" onclick="exportMediaManifest()">Photos & Documents Manifest</button></div></div><div class="notice">Photo and document files themselves are not embedded in the export; the backup includes their TowTag metadata and storage references.</div>';
 }
+
+// ==================== TowTag Daily Ops Suite ====================
+const TOWTAG_OPS_VERSION=1;
+const _towtagCoreApi=api;
+const _baseHomeDailyOps=home;
+const _baseRenderDailyOps=render;
+const _baseDetailDailyOps=detail;
+const _baseAddFormDailyOps=addForm;
+const _baseQueueOfflineIntake=queueOfflineIntake;
+const _baseBillingCardDailyOps=billingCard;
+const _baseLienTrackerCardDailyOps=lienTrackerCard;
+const _baseInvoiceFormDailyOps=invoiceForm;
+const _baseReleaseVehicleDailyOps=releaseVehicle;
+const _baseCustomerNotificationScreenDailyOps=customerNotificationScreen;
+
+function opsData(v){
+  return v&&v.ops_data&&typeof v.ops_data==='object'&&!Array.isArray(v.ops_data)?v.ops_data:{};
+}
+function withoutHistory(o){const x={...(o||{})};delete x.change_history;return x;}
+function vehicleSnapshot(v){
+  if(!v)return {};
+  const keys=['year','make','model','color','plate','plate_state','vin','status','yard_location','notes','impound_type','tow_number','driver_name','odometer','keys_status','yard_spot','condition_notes','property_notes','hold_type','hold_notes','release_at','released_to','release_id_checked','release_authorized_by','release_notes','record_type','owned_disposition','asking_price','disposition_amount','disposition_completed_at','owned_notes','equipment_type','used_dollies','recovery_performed','recovery_minutes','winching_performed','cleanup_performed','hazmat_cleanup','extra_labor','extra_labor_minutes','after_hours','scene_wait_minutes','billable_miles','other_billable_work','billing_notes','invoice_number','invoice_data','invoice_updated_at','archived_at','archived_by','deleted_at','deleted_by','lien_data','damage_data'];
+  const out={};keys.forEach(k=>out[k]=v[k]);out.ops_data=withoutHistory(opsData(v));return out;
+}
+function describePatch(p){
+  const keys=Object.keys(p||{});
+  if(keys.includes('release_at'))return p.release_at?'Vehicle released':'Vehicle release changed';
+  if(keys.includes('status'))return 'Status changed';
+  if(keys.includes('invoice_data'))return 'Invoice or payment updated';
+  if(keys.includes('damage_data'))return 'Damage diagram updated';
+  if(keys.includes('lien_data'))return 'Lien tracker updated';
+  if(keys.includes('archived_at'))return p.archived_at?'Vehicle archived':'Vehicle restored from archive';
+  if(keys.includes('deleted_at'))return p.deleted_at?'Vehicle moved to Trash':'Vehicle restored from Trash';
+  if(keys.length===1&&keys[0]==='ops_data')return 'Daily operations updated';
+  return 'Vehicle information updated';
+}
+api=async function(path,opt={}){
+  const method=String(opt.method||'GET').toUpperCase();
+  if(method==='PATCH'&&/^\/rest\/v1\/vehicles\?id=eq\./.test(path)&&typeof opt.body==='string'){
+    try{
+      const id=decodeURIComponent((path.match(/id=eq\.([^&]+)/)||[])[1]||'');
+      if(id){
+        const fresh=await _towtagCoreApi('/rest/v1/vehicles?select=*&id=eq.'+encodeURIComponent(id));
+        const current=fresh?.[0];
+        if(current){
+          const patch=JSON.parse(opt.body||'{}');
+          const currentOps=opsData(current),prior=Array.isArray(currentOps.change_history)?currentOps.change_history:[];
+          const entry={id:'hist_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),at:new Date().toISOString(),by:user?.id||null,by_name:staffMember?.display_name||user?.email||'Staff',description:describePatch(patch),snapshot:vehicleSnapshot(current)};
+          const patchOps=patch.ops_data&&typeof patch.ops_data==='object'&&!Array.isArray(patch.ops_data)?patch.ops_data:{};
+          patch.ops_data={...currentOps,...patchOps,change_history:[...prior.slice(-19),entry]};
+          opt={...opt,body:JSON.stringify(patch)};
+        }
+      }
+    }catch(e){console.warn('TowTag history capture skipped',e)}
+  }
+  if(method==='POST'&&path==='/rest/v1/vehicles'&&typeof opt.body==='string'){
+    try{
+      const body=JSON.parse(opt.body||'{}');
+      if(el('intakeYardSpot'))body.yard_spot=val('intakeYardSpot')||body.yard_spot||null;
+      body.ops_data={...captureIntakeOps(),...(body.ops_data||{})};
+      opt={...opt,body:JSON.stringify(body)};
+    }catch{}
+  }
+  return _towtagCoreApi(path,opt);
+};
+
+async function logOpsActivity(vehicleId,eventType,description){
+  try{
+    await _towtagCoreApi('/rest/v1/vehicle_activity',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({vehicle_id:vehicleId,event_type:eventType,description,created_by:user?.id||null,actor_name:staffMember?.display_name||user?.email||'Staff'})});
+  }catch(e){console.warn('Activity log skipped',e)}
+}
+async function patchVehicleOps(v,partial,description='Daily operations updated',rerender=true){
+  if(!v)return;
+  const live=vehicles.find(x=>x.id===v.id)||v;
+  const next={...opsData(live),...partial,ops_version:TOWTAG_OPS_VERSION,ops_updated_at:new Date().toISOString(),ops_updated_by:staffMember?.display_name||user?.email||'Staff'};
+  await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(v.id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({ops_data:next})});
+  await logOpsActivity(v.id,'daily_ops',description);
+  await load(); selected=vehicles.find(x=>x.id===v.id)||null;
+  if(rerender&&selected)detail(v.id);
+}
+
+const DISPATCH_STATES=[['needs_pickup','Needs Pickup'],['en_route','En Route'],['at_yard','At Yard'],['needs_paperwork','Needs Paperwork'],['ready_release','Ready for Release'],['complete','Complete']];
+function dispatchLabel(v){const s=opsData(v).dispatch_state||((v.release_at||v.archived_at)?'complete':'at_yard');return DISPATCH_STATES.find(x=>x[0]===s)?.[1]||'At Yard';}
+function currentOpsMode(){return localStorage.getItem('towtag_ops_mode')||'driver';}
+function setOpsMode(mode){localStorage.setItem('towtag_ops_mode',mode==='office'?'office':'driver');home();}
+function activeYardVehicles(){return vehicles.filter(v=>!v.deleted_at&&!v.archived_at);}
+function todayDateKey(d=new Date()){const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function isToday(value){if(!value)return false;const d=new Date(value);return !Number.isNaN(d.getTime())&&todayDateKey(d)===todayDateKey();}
+function dueReminders(v){return (opsData(v).reminders||[]).filter(r=>!r.done&&r.due&&new Date(r.due).getTime()<=Date.now());}
+function releaseChecklist(v){return {...(opsData(v).release_checklist||{})};}
+function releaseChecklistMissing(v){
+  const c=releaseChecklist(v),missing=[];
+  if(!c.id_ready)missing.push('ID ready / verified');
+  if(v.hold_type&&v.hold_type!=='none'&&!c.hold_cleared)missing.push('Hold cleared');
+  if(notificationBalance(v)>0&&!c.payment_handled)missing.push('Payment handled');
+  if(!c.property_returned)missing.push('Personal property handled');
+  if(v.keys_status==='received'&&!c.keys_returned)missing.push('Keys returned');
+  if(!c.signature_ready)missing.push('Release signature ready');
+  return missing;
+}
+function dailyAttentionReasons(v){
+  if(!v||v.deleted_at||v.archived_at)return [];
+  const reasons=[],o=opsData(v),photos=standardPhotoProgress(v);
+  if(o.problem_flag)reasons.push('Problem flag');
+  if(o.critical_note)reasons.push('Critical note');
+  if(!v.yard_spot)reasons.push('No yard spot');
+  if(!v.vin&&!v.plate)reasons.push('Missing VIN / plate');
+  if(photos.done<photos.total)reasons.push('Photos '+photos.done+'/'+photos.total);
+  if(v.hold_type&&v.hold_type!=='none')reasons.push(holdLabel(v.hold_type));
+  if((opsData(v).dispatch_state||'at_yard')==='ready_release'&&releaseChecklistMissing(v).length)reasons.push('Release checklist incomplete');
+  dueReminders(v).forEach(()=>reasons.push('Reminder due'));
+  agingReasons(v).forEach(r=>reasons.push(r.label));
+  return [...new Set(reasons)];
+}
+incompleteWarnings=function(v){return dailyAttentionReasons(v);};
+attentionCard=function(v){
+  const reasons=dailyAttentionReasons(v);if(!reasons.length)return '';
+  return '<div class="card attention"><div class="small muted">NEEDS ATTENTION</div><strong>'+reasons.length+' item'+(reasons.length===1?'':'s')+'</strong><div class="alert-tags">'+reasons.slice(0,8).map(x=>'<span class="alert-tag">'+esc(x)+'</span>').join('')+'</div><button class="btn secondary" onclick="dailyOpsScreen()">Open Daily Ops</button></div>';
+};
+
+const PHOTO_REQS=[['Front','Front'],['Rear','Rear'],['Driver Side','Driver side'],['Passenger Side','Passenger side'],['Interior','Interior'],['Plate','Plate'],['VIN','VIN'],['Odometer','Odometer'],['Damage','Damage']];
+standardPhotoProgress=function(v){
+  const have=new Set(vehiclePhotoRows(v).map(p=>String(p.caption||'').trim().toLowerCase()));
+  const done=PHOTO_REQS.filter(x=>have.has(x[1].toLowerCase())).length;
+  return {done,total:PHOTO_REQS.length};
+};
+function photoChecklistHtml(v){
+  const have=new Set(vehiclePhotoRows(v).map(p=>String(p.caption||'').trim().toLowerCase()));
+  return '<div class="photo-check">'+PHOTO_REQS.map(x=>'<div class="'+(have.has(x[1].toLowerCase())?'done':'')+'">'+(have.has(x[1].toLowerCase())?'✓ ':'')+esc(x[0])+'</div>').join('')+'</div>';
+}
+function markRecentVehicle(id){
+  try{const arr=JSON.parse(localStorage.getItem('towtag_recent_vehicles')||'[]').filter(x=>x!==id);arr.unshift(id);localStorage.setItem('towtag_recent_vehicles',JSON.stringify(arr.slice(0,10)));}catch{}
+}
+function recentVehicles(){
+  try{const ids=JSON.parse(localStorage.getItem('towtag_recent_vehicles')||'[]');return ids.map(id=>vehicles.find(v=>v.id===id)).filter(Boolean).slice(0,8);}catch{return []}
+}
+function recentStripHtml(){
+  const rows=recentVehicles();if(!rows.length)return '';
+  return '<div class="today-section"><div class="small muted">RECENTLY VIEWED</div><div class="recent-strip">'+rows.map(v=>'<button class="recent-card" onclick="detail(\''+v.id+'\')"><b>'+esc(title(v))+'</b><div class="small muted" style="margin-top:5px">'+esc(v.plate||'No plate')+(v.yard_spot?' · '+esc(v.yard_spot):'')+'</div></button>').join('')+'</div></div>';
+}
+function shiftNotesForVehicle(v){return Array.isArray(opsData(v).shift_notes)?opsData(v).shift_notes:[];}
+function openShiftNotes(){
+  const rows=[];vehicles.forEach(v=>shiftNotesForVehicle(v).filter(n=>!n.resolved).forEach(n=>rows.push({v,n})));
+  rows.sort((a,b)=>new Date(b.n.at||0)-new Date(a.n.at||0));
+  return rows;
+}
+function shiftNotesHomeHtml(){
+  const rows=openShiftNotes().slice(0,4);if(!rows.length)return '';
+  return '<div class="card"><div class="small muted">SHIFT NOTES</div>'+rows.map(x=>'<button class="vehicle" style="margin:8px 0" onclick="detail(\''+x.v.id+'\')"><b>'+esc(title(x.v))+'</b><div class="small" style="margin-top:5px">'+esc(x.n.text||'')+'</div><div class="small muted">'+esc(x.n.by_name||'Staff')+' · '+esc(new Date(x.n.at).toLocaleString())+'</div></button>').join('')+'<button class="btn secondary" onclick="shiftNotesScreen()">All Shift Notes</button></div>';
+}
+
+let reminderTimer=null;
+async function requestReminderAlerts(){
+  if(!('Notification' in window)){alert('Browser notifications are not supported here. TowTag will still show due reminders inside the app.');return}
+  const p=await Notification.requestPermission();if(p==='granted'){alert('TowTag reminder alerts enabled on this device while TowTag is running.');runReminderAlerts(true)}else alert('Reminder alerts were not enabled. Due reminders will still appear in TowTag.');
+}
+function runReminderAlerts(force=false){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  activeYardVehicles().forEach(v=>dueReminders(v).forEach(r=>{const key='towtag_notified_'+r.id;const last=Number(localStorage.getItem(key)||0);if(!force&&last&&Date.now()-last<6*3600000)return;try{new Notification('TowTag Reminder',{body:title(v)+' — '+r.text,tag:'towtag-'+r.id});localStorage.setItem(key,String(Date.now()));}catch{}}));
+}
+function startReminderNotifier(){if(reminderTimer)clearInterval(reminderTimer);runReminderAlerts(false);reminderTimer=setInterval(()=>runReminderAlerts(false),60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)runReminderAlerts(false)},{once:false});}
+function dueReminderBannerHtml(){const rows=[];activeYardVehicles().forEach(v=>dueReminders(v).forEach(r=>rows.push({v,r})));if(!rows.length)return '';return '<div class="card attention"><div class="small muted">REMINDERS DUE</div>'+rows.slice(0,5).map(x=>'<button class="vehicle" onclick="detail(\''+x.v.id+'\')"><b>'+esc(title(x.v))+'</b><div class="small">'+esc(x.r.text)+'</div></button>').join('')+'</div>'; }
+home=function(){
+  selected=null;
+  const live=vehicles.filter(v=>!v.deleted_at),active=live.filter(v=>!v.archived_at),mode=currentOpsMode(),queuedCount=offlineIntakes().length;
+  const inToday=active.filter(v=>isToday(v.tow_date)).length,outToday=vehicles.filter(v=>isToday(v.release_at)).length,holds=active.filter(v=>v.hold_type&&v.hold_type!=='none').length,attention=active.filter(v=>dailyAttentionReasons(v).length).length;
+  const adminButton=isAdminRole()?'<button class="link" onclick="adminStaffScreen()">Staff</button><button class="link" onclick="exportCenter()">Export</button>':'';
+  const driverActions='<div class="ops-grid"><button class="btn" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="dispatchBoard()">Dispatch / To-Do</button><button class="btn secondary" onclick="yardSpotFinder()">Yard Spot Finder</button><button class="btn secondary" onclick="needsAttentionScreen()">Needs Attention'+(attention?' ('+attention+')':'')+'</button><button class="btn secondary" onclick="morningYardCheck()">Morning Yard Check</button><button class="btn secondary" onclick="shiftNotesScreen()">Shift Notes</button><button class="btn secondary" onclick="requestReminderAlerts()">Enable Reminder Alerts</button></div>';
+  const officeActions='<div class="ops-grid"><button class="btn" onclick="todayDashboard()">Today</button><button class="btn secondary" onclick="holdDashboard()">Hold Dashboard</button><button class="btn secondary" onclick="dailyCloseout()">Daily Closeout</button><button class="btn secondary" onclick="yardReport()">Yard Report</button><button class="btn secondary" onclick="printYardInventoryChecklist()">Print Yard Checklist</button><button class="btn secondary" onclick="agingAlertsScreen()">Lien / Aging Alerts</button><button class="btn secondary" onclick="dispatchBoard()">Dispatch / To-Do</button><button class="btn secondary" onclick="needsAttentionScreen()">Needs Attention'+(attention?' ('+attention+')':'')+'</button><button class="btn secondary" onclick="requestReminderAlerts()">Enable Reminder Alerts</button></div>';
+  app.innerHTML='<div class="top"><div>'+BRAND_HTML+'<div class="muted small">'+active.length+' active · '+holds+' holds · '+attention+' need attention'+(queuedCount?' · '+queuedCount+' waiting to sync':'')+'</div></div><div style="display:flex;gap:12px">'+adminButton+'<button class="link" onclick="logout()">Sign Out</button></div></div>'+ 
+    '<div class="mode-switch"><button class="'+(mode==='driver'?'active':'')+'" onclick="setOpsMode(\'driver\')">Driver Mode</button><button class="'+(mode==='office'?'active':'')+'" onclick="setOpsMode(\'office\')">Office Mode</button></div>'+ 
+    '<div class="ops-stat-grid"><div class="ops-stat"><strong>'+inToday+'</strong><span>IN TODAY</span></div><div class="ops-stat"><strong>'+outToday+'</strong><span>OUT TODAY</span></div><div class="ops-stat"><strong>'+holds+'</strong><span>HOLDS</span></div><div class="ops-stat"><strong>'+attention+'</strong><span>ATTENTION</span></div></div>'+ 
+    (mode==='driver'?driverActions:officeActions)+dueReminderBannerHtml()+(queuedCount?'<button class="btn secondary" onclick="syncOfflineIntakes()">Sync '+queuedCount+' Saved Intake'+(queuedCount===1?'':'s')+'</button>':'')+shiftNotesHomeHtml()+recentStripHtml()+ 
+    '<div class="choice-grid filters" style="grid-template-columns:repeat(6,1fr);margin-top:14px"><button class="choice active" data-filter onclick="setHomeFilter(\'all\',this)">Active</button><button class="choice" data-filter onclick="setHomeFilter(\'tow\',this)">Tows</button><button class="choice" data-filter onclick="setHomeFilter(\'sale\',this)">For Sale</button><button class="choice" data-filter onclick="setHomeFilter(\'scrap\',this)">Scrap</button><button class="choice" data-filter onclick="setHomeFilter(\'archive\',this)">Archive</button><button class="choice" data-filter onclick="setHomeFilter(\'trash\',this)">Trash</button></div>'+ 
+    '<input id="search" class="input" type="search" autocomplete="off" placeholder="Search plate, VIN, job #, yard spot, owner…" oninput="render(this.value)"><div id="list"></div>';
+  homeFilter='all';render('');
+};
+render=function(q){
+  q=(q||'').trim().toLowerCase();const globalSearch=!!q;let rows=vehicles.filter(v=>!q||vehicleSearchText(v).includes(q)||JSON.stringify(opsData(v)).toLowerCase().includes(q));
+  if(!globalSearch){if(homeFilter==='trash')rows=rows.filter(v=>!!v.deleted_at);else if(homeFilter==='archive')rows=rows.filter(v=>!v.deleted_at&&!!v.archived_at);else{rows=rows.filter(v=>!v.deleted_at&&!v.archived_at);if(homeFilter==='tow')rows=rows.filter(v=>(v.record_type||'tow')!=='company_owned');if(homeFilter==='sale')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='for_sale');if(homeFilter==='scrap')rows=rows.filter(v=>v.record_type==='company_owned'&&v.owned_disposition==='scrap');}}
+  const target=el('list');if(!target)return;const note=globalSearch?'<div class="search-all-note">Searching active + archived + trash records</div>':'';
+  target.innerHTML=note+(rows.map(v=>{const o=opsData(v),owned=v.record_type==='company_owned',badge=v.deleted_at?'Trash':(v.archived_at?'Archived':(owned?ownedLabel(v.owned_disposition):statusLabel(v.status))),p=standardPhotoProgress(v),warn=dailyAttentionReasons(v);return '<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+' '+(o.pinned?'<span class="pin-pill">PINNED</span>':'')+' '+(o.problem_flag?'<span class="flag-pill">FLAG</span>':'')+'</h3><div class="muted">'+esc(v.color||'No color')+' · '+esc(v.plate||'No plate')+(v.yard_spot?' · <b>'+esc(v.yard_spot)+'</b>':'')+'</div><div class="small muted" style="margin-top:7px">'+esc(dispatchLabel(v))+' · '+esc(badge)+(o.internal_job_number?' · '+esc(o.internal_job_number):'')+'</div><div class="small muted" style="margin-top:6px">Photos '+p.done+'/'+p.total+(warn.length?' · <span style="color:#ffd76a">⚠ '+warn.length+'</span>':'')+'</div>'+(o.critical_note?'<div class="small" style="color:#ffb8bf;margin-top:7px">'+esc(o.critical_note)+'</div>':'')+'</button>';}).join('')||'<div class="card muted">No matching vehicles.</div>');
+};
+
+function generateTowNumber(){
+  const day=todayDateKey().replace(/-/g,''),prefix='MC-'+day+'-';let max=0;
+  vehicles.forEach(v=>{const x=String(v.tow_number||'').toUpperCase();if(x.startsWith(prefix)){const n=Number(x.slice(prefix.length));if(Number.isFinite(n))max=Math.max(max,n);}});
+  return prefix+String(max+1).padStart(3,'0');
+}
+function fillGeneratedTowNumber(){const x=el('towNumber');if(x&&!x.value)x.value=generateTowNumber();saveIntakeDraft();}
+function generateJobNumber(){
+  const day=todayDateKey().replace(/-/g,''),prefix='TT-'+day+'-';let max=0;
+  vehicles.forEach(v=>{const x=String(opsData(v).internal_job_number||'');if(x.startsWith(prefix)){const n=Number(x.slice(prefix.length));if(Number.isFinite(n))max=Math.max(max,n);}});
+  return prefix+String(max+1).padStart(2,'0');
+}
+function captureIntakeOps(){
+  return {ops_version:TOWTAG_OPS_VERSION,dispatch_state:'at_yard',internal_job_number:val('intakeJobNumber')||generateJobNumber(),customer_phone:val('intakeCustomerPhone')||'',key_location:val('intakeKeyLocation')||'',pickup_coordinates:val('pickupCoords')||'',pinned:false,problem_flag:false,reminders:[],call_log:[],shift_notes:[],release_checklist:{},property_inventory:{}};
+}
+queueOfflineIntake=function(body,agencyName){
+  const enriched={...(body||{}),yard_spot:val('intakeYardSpot')||body?.yard_spot||null,ops_data:{...captureIntakeOps(),...(body?.ops_data||{})}};
+  return _baseQueueOfflineIntake(enriched,agencyName);
+};
+addForm=function(notice=''){
+  _baseAddFormDailyOps(notice);
+  const h=app.querySelector('.h1');if(!h)return;
+  h.insertAdjacentHTML('afterend','<div class="card"><div class="small muted">DRIVER QUICK TOOLS</div><div class="row"><input id="intakeJobNumber" class="input" placeholder="TowTag Job #" value="'+esc(generateJobNumber())+'"><input id="intakeYardSpot" class="input" placeholder="Yard spot (A12, Fence 3…)"></div><div class="row"><input id="intakeCustomerPhone" class="input" inputmode="tel" placeholder="Customer phone (optional)"><input id="intakeKeyLocation" class="input" placeholder="Key location / hook #"></div><input id="pickupCoords" type="hidden"><div class="voice-box"><div id="voiceIntakeText" class="small muted">Say the basics and TowTag will fill what it can.</div><div class="ops-grid" style="margin-top:8px"><button class="btn secondary" type="button" onclick="startVoiceIntake()">🎙 Voice Intake</button><button class="btn secondary" type="button" onclick="useCurrentPickupLocation()">Use Current Location</button><button class="btn secondary" type="button" onclick="fillGeneratedTowNumber()">Generate Tow #</button><button class="btn secondary" type="button" onclick="vinScanInput.click()">Scan VIN Barcode</button><button class="btn secondary ops-wide" type="button" onclick="plateScanInput.click()">Scan License Plate</button></div><input id="vinScanInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="scanVinPhoto(this.files?.[0])"><input id="plateScanInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="scanPlatePhoto(this.files?.[0])"></div></div>');
+  setTimeout(()=>{['vin','plate','state'].forEach(id=>{const x=el(id);if(x)x.addEventListener('blur',showDuplicateHint)});},0);
+};
+function showDuplicateHint(){const dup=findVehicleDuplicate(val('vin'),val('plate'),val('state'));const old=el('duplicateHint');if(old)old.remove();if(!dup)return;const n=document.createElement('div');n.id='duplicateHint';n.className='notice';n.innerHTML='Possible duplicate: <b>'+esc(title(dup))+'</b> · '+esc(dup.plate||dup.vin||'')+' <button class="link" type="button" onclick="detail(\''+dup.id+'\')">Open existing</button>';el('vin')?.parentElement?.insertAdjacentElement('afterend',n);}
+function startVoiceIntake(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert('Voice recognition is not available in this browser. You can still use the microphone button on the iPhone keyboard to dictate into any TowTag field.');return}
+  const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;const box=el('voiceIntakeText');if(box)box.textContent='Listening…';r.onresult=e=>{const text=e.results?.[0]?.[0]?.transcript||'';if(box)box.textContent=text;applyVoiceIntake(text)};r.onerror=()=>{if(box)box.textContent='Voice intake did not catch that. Try again.'};r.start();
+}
+function applyVoiceIntake(text){
+  const t=String(text||''),u=t.toUpperCase();const year=t.match(/\b(19|20)\d{2}\b/)?.[0];if(year&&el('year'))el('year').value=year;
+  const colors=['black','white','silver','gray','grey','red','blue','green','maroon','brown','gold','tan','orange','yellow','purple'];for(const c of colors){if(new RegExp('\\b'+c+'\\b','i').test(t)&&el('color')){el('color').value=c.replace('grey','gray').replace(/^./,x=>x.toUpperCase());break}}
+  const vin=t.replace(/[^A-Z0-9]/gi,' ').toUpperCase().match(/\b[A-HJ-NPR-Z0-9]{17}\b/)?.[0];if(vin&&el('vin'))el('vin').value=vin;
+  const pm=t.match(/\bplate\s+([A-Z0-9 -]{3,10})/i);if(pm&&el('plate'))el('plate').value=pm[1].trim().replace(/\s+/g,' ').toUpperCase();
+  if(/\bno keys?\b/i.test(t)&&el('keysStatus'))el('keysStatus').value='no_keys';else if(/\bkeys? (received|with|present)\b/i.test(t)&&el('keysStatus'))el('keysStatus').value='received';
+  if(/wheel lift/i.test(t)&&el('equipmentType'))el('equipmentType').value='wheel_lift';if(/flat ?bed/i.test(t)&&el('equipmentType'))el('equipmentType').value='flat_bed';if(/\bdollies\b/i.test(t)&&el('usedDollies'))el('usedDollies').checked=true;
+  const pick=t.match(/picked up (?:from|at) (.+?)(?:,|\.|$)/i);if(pick&&el('pickup'))el('pickup').value=pick[1].trim();
+  const mm=t.match(/\b(?:make|a)\s+(Ford|Chevrolet|Chevy|Dodge|Ram|Toyota|Honda|Nissan|Hyundai|Kia|Jeep|GMC|Subaru|Volkswagen|VW|BMW|Mercedes|Lexus|Mazda|Buick|Cadillac|Chrysler|Volvo)\b/i);if(mm&&el('make'))el('make').value=mm[1].replace(/^Chevy$/i,'Chevrolet').replace(/^VW$/i,'Volkswagen');
+  const notes=el('notes');if(notes&&!notes.value)notes.value='Voice intake: '+t;
+  saveIntakeDraft();
+}
+async function reverseGeocodePickup(lat,lon){
+  const r=await fetch(BASE+'/functions/v1/towtag-reverse-geocode?lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lon),{headers:{apikey:KEY,Authorization:'Bearer '+session.access_token}});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'Address lookup failed');return d;
+}
+function useCurrentPickupLocation(){
+  if(!navigator.geolocation){alert('Location is not available in this browser.');return}
+  navigator.geolocation.getCurrentPosition(async pos=>{const lat=pos.coords.latitude,lon=pos.coords.longitude,coords=lat.toFixed(6)+','+lon.toFixed(6);if(el('pickupCoords'))el('pickupCoords').value=coords;
+    try{const d=await reverseGeocodePickup(lat,lon);if(el('pickup'))el('pickup').value=d.address||('GPS '+coords);alert('Pickup location saved: '+(d.address||coords));}
+    catch(e){if(el('pickup')&&!el('pickup').value)el('pickup').value='GPS '+coords;alert('GPS saved. Street address lookup was unavailable, so TowTag kept the coordinates.');}
+    saveIntakeDraft();
+  },e=>alert('Could not get location: '+e.message),{enableHighAccuracy:true,timeout:10000});
+}
+async function scanVinPhoto(file){
+  if(!file)return;
+  try{
+    if(!('BarcodeDetector' in window))throw new Error('VIN barcode scanning is not supported by this browser. Take the VIN photo and enter the VIN manually.');
+    const bitmap=await createImageBitmap(file),formats=await BarcodeDetector.getSupportedFormats();const preferred=['code_39','code_128','data_matrix','qr_code'].filter(x=>formats.includes(x));const detector=new BarcodeDetector(preferred.length?{formats:preferred}:undefined),codes=await detector.detect(bitmap);const raw=codes.map(x=>String(x.rawValue||'').toUpperCase().replace(/[^A-Z0-9]/g,'')).find(x=>/^[A-HJ-NPR-Z0-9]{17}$/.test(x));if(!raw)throw new Error('I could not read a 17-character VIN from that image. Try a closer, sharper photo.');if(el('vin'))el('vin').value=raw;showDuplicateHint();saveIntakeDraft();alert('VIN scanned: '+raw);
+  }catch(e){alert(e.message||'VIN scan failed.');}
+}
+
+function loadTesseract(){
+  if(window.Tesseract)return Promise.resolve(window.Tesseract);
+  return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.async=true;s.onload=()=>resolve(window.Tesseract);s.onerror=()=>reject(new Error('Plate reader could not load.'));document.head.appendChild(s);});
+}
+function plateCandidateFromText(raw){
+  const lines=String(raw||'').toUpperCase().split(/\n+/).map(x=>x.replace(/[^A-Z0-9]/g,'')).filter(x=>x.length>=2&&x.length<=8);
+  const bad=new Set(['OREGON','WASHINGTON','CALIFORNIA','IDAHO','NEVADA','MONTANA','TRAILER','PERMANENT']);
+  return lines.find(x=>!bad.has(x)&&/[0-9]/.test(x))||lines.find(x=>!bad.has(x))||'';
+}
+async function scanPlatePhoto(file){
+  if(!file)return;const box=el('voiceIntakeText');if(box)box.textContent='Reading license plate…';
+  try{const T=await loadTesseract();const worker=await T.createWorker('eng');const result=await worker.recognize(file);await worker.terminate();const plate=plateCandidateFromText(result?.data?.text||'');if(!plate)throw new Error('I could not confidently read a plate. Try a closer, straight-on photo.');if(el('plate'))el('plate').value=plate;showDuplicateHint();saveIntakeDraft();if(box)box.textContent='Plate read: '+plate;alert('Plate read: '+plate+'\n\nVerify it before saving.');}
+  catch(e){if(box)box.textContent='Plate scan failed. You can still type the plate manually.';alert(e.message||'Plate scan failed.');}
+}
+
+function vehicleOpsSummaryHtml(v){
+  const o=opsData(v),balance=notificationBalance(v);return '<div class="card" id="dailyOpsCard"><div class="small muted">DAILY OPS</div>'+(o.critical_note?'<div class="critical-note"><strong>IMPORTANT</strong>'+esc(o.critical_note)+'</div>':'')+'<div class="kv"><div><span>Workflow</span>'+esc(dispatchLabel(v))+'</div><div><span>Yard spot</span><span class="yard-spot-big">'+esc(v.yard_spot||'—')+'</span></div><div><span>TowTag job #</span>'+esc(o.internal_job_number||'—')+'</div><div><span>Keys</span>'+esc(o.key_location||keysLabel(v.keys_status))+'</div><div><span>Payment</span>'+esc(o.payment_status||((balance<=0&&invoiceStored(v).total)?'Paid':'Not set'))+'</div><div><span>Photos</span>'+standardPhotoProgress(v).done+'/'+standardPhotoProgress(v).total+'</div></div>'+photoChecklistHtml(v)+'<div class="ops-grid"><button class="btn" onclick="dailyOpsScreen()">Open Daily Ops</button><button class="btn secondary" onclick="togglePinnedVehicle()">'+(o.pinned?'Unpin Vehicle':'Pin Vehicle')+'</button><button class="btn '+(o.problem_flag?'danger':'secondary')+'" onclick="toggleProblemFlag()">'+(o.problem_flag?'Clear Problem Flag':'Flag Problem')+'</button><button class="btn secondary" onclick="takeLabeledPhoto(\'Plate\')">Take Plate Photo</button></div></div>';
+}
+detail=function(id){
+  markRecentVehicle(id);_baseDetailDailyOps(id);const v=vehicles.find(x=>x.id===id);if(!v)return;setTimeout(()=>{const h=app.querySelector('.h1');if(h&&!el('dailyOpsCard'))h.insertAdjacentHTML('afterend',vehicleOpsSummaryHtml(v));const media=el('vehicleMediaCard');if(media&&!media.querySelector('[data-plate-photo]')){const b=document.createElement('button');b.className='btn secondary';b.dataset.platePhoto='1';b.textContent='Take Plate Photo';b.onclick=()=>takeLabeledPhoto('Plate');media.appendChild(b)}},0);
+};
+async function togglePinnedVehicle(){if(!selected)return;await patchVehicleOps(selected,{pinned:!opsData(selected).pinned},opsData(selected).pinned?'Vehicle unpinned':'Vehicle pinned');}
+async function toggleProblemFlag(){if(!selected)return;const next=!opsData(selected).problem_flag;let note=opsData(selected).problem_flag_note||'';if(next){const x=prompt('Problem / special attention note (optional):',note);if(x===null)return;note=x.trim()}await patchVehicleOps(selected,{problem_flag:next,problem_flag_note:next?note:''},next?'Problem flag added':'Problem flag cleared');}
+
+function dailyOpsScreen(){
+  if(!selected)return;const v=selected,o=opsData(v),c=releaseChecklist(v),inv=o.property_inventory||{},rems=Array.isArray(o.reminders)?o.reminders:[],calls=Array.isArray(o.call_log)?o.call_log:[],notes=shiftNotesForVehicle(v),history=Array.isArray(o.change_history)?o.change_history:[];
+  app.innerHTML='<button class="link" onclick="detail(\''+v.id+'\')">‹ Vehicle</button><div class="h1">Daily Ops</div><div class="muted">'+esc(title(v))+' · '+esc(v.plate||'No plate')+'</div>'+ 
+  '<div class="card"><div class="small muted">WORKFLOW</div><div class="workflow-strip">'+DISPATCH_STATES.map(x=>'<button class="workflow-step '+((o.dispatch_state||'at_yard')===x[0]?'active':'')+'" onclick="setDispatchState(\''+x[0]+'\')">'+esc(x[1])+'</button>').join('')+'</div><div class="row" style="margin-top:10px"><input id="opsJobNumber" class="input" placeholder="TowTag job #" value="'+esc(o.internal_job_number||'')+'"><input id="opsYardSpot" class="input" placeholder="Yard spot" value="'+esc(v.yard_spot||'')+'"></div><button class="btn secondary" onclick="saveJobAndSpot()">Save Job # / Yard Spot</button></div>'+ 
+  '<div class="card"><div class="small muted">IMPORTANT / HANDOFF</div><textarea id="opsCriticalNote" class="input" rows="2" placeholder="Pinned critical note">'+esc(o.critical_note||'')+'</textarea><div class="row"><button class="btn secondary" onclick="saveCriticalNote()">Save Critical Note</button><button class="btn '+(o.problem_flag?'danger':'secondary')+'" onclick="toggleProblemFlag()">'+(o.problem_flag?'Clear Flag':'Flag Problem')+'</button></div><textarea id="newShiftNote" class="input" rows="2" placeholder="Shift note for Mike / Damion"></textarea><button class="btn secondary" onclick="addShiftNote()">Add Shift Note</button><div class="mini-list">'+(notes.slice().reverse().map(n=>'<div class="shift-note '+esc(n.priority||'normal')+'"><b>'+esc(n.by_name||'Staff')+'</b> · '+esc(new Date(n.at).toLocaleString())+'<div style="margin-top:5px">'+esc(n.text||'')+'</div>'+(!n.resolved?'<button class="link" onclick="resolveShiftNote(\''+esc(n.id)+'\')">Resolve</button>':'<div class="small muted">Resolved</div>')+'</div>').join('')||'<div class="muted small">No shift notes.</div>')+'</div></div>'+ 
+  '<div class="card"><div class="small muted">CUSTOMER / CONTACT LOG</div><input id="opsCustomerPhone" class="input" inputmode="tel" placeholder="Customer phone" value="'+esc(o.customer_phone||invoiceStored(v).generic_customer_phone||'')+'"><div class="ops-grid"><button class="btn secondary" onclick="saveCustomerPhone()">Save Phone</button><button class="btn secondary" onclick="customerNotificationScreen()">Text Customer</button></div><div class="row"><select id="callType" class="input"><option>Called owner</option><option>Left voicemail</option><option>Owner called</option><option>Insurance called</option><option>Police / agency contacted</option><option>Other contact</option></select><input id="callNote" class="input" placeholder="Call note"></div><button class="btn secondary" onclick="addCallLog()">Add Contact Log</button><div class="mini-list">'+(calls.slice(-6).reverse().map(x=>'<div class="mini-item"><b>'+esc(x.type)+'</b><div class="small">'+esc(x.note||'')+'</div><div class="small muted">'+esc(x.by_name||'Staff')+' · '+esc(new Date(x.at).toLocaleString())+'</div></div>').join('')||'<div class="muted small">No calls logged.</div>')+'</div></div>'+ 
+  '<div class="card"><div class="small muted">KEY TRACKING</div><div class="row"><select id="opsKeysStatus" class="input"><option value="unknown" '+(v.keys_status==='unknown'?'selected':'')+'>Keys Unknown</option><option value="received" '+(v.keys_status==='received'?'selected':'')+'>Keys Received</option><option value="no_keys" '+(v.keys_status==='no_keys'?'selected':'')+'>No Keys</option></select><input id="opsKeyLocation" class="input" placeholder="Key hook / bin / location" value="'+esc(o.key_location||'')+'"></div><button class="btn secondary" onclick="saveKeyTracking()">Save Key Tracking</button></div>'+ 
+  '<div class="card"><div class="small muted">PAYMENT STATUS</div><div class="muted small">Invoice balance: <b>'+money(notificationBalance(v))+'</b></div><div class="row"><select id="opsPaymentStatus" class="input"><option value="not_set" '+(!o.payment_status||o.payment_status==='not_set'?'selected':'')+'>Not Set</option><option value="unpaid" '+(o.payment_status==='unpaid'?'selected':'')+'>Unpaid</option><option value="partial" '+(o.payment_status==='partial'?'selected':'')+'>Partial</option><option value="paid" '+(o.payment_status==='paid'?'selected':'')+'>Paid</option><option value="waived" '+(o.payment_status==='waived'?'selected':'')+'>Waived</option></select><input id="opsPaymentMethod" class="input" placeholder="Method / note" value="'+esc(o.payment_method||'')+'"></div><button class="btn secondary" onclick="savePaymentStatus()">Save Payment Status</button></div>'+ 
+  '<div class="card"><div class="small muted">RELEASE CHECKLIST</div>'+[['id_ready','ID ready / verified'],['hold_cleared','Hold cleared'],['payment_handled','Payment handled'],['property_returned','Personal property handled'],['keys_returned','Keys handled / returned'],['signature_ready','Signature ready to capture']].map(x=>'<label class="check-row"><input id="release_'+x[0]+'" type="checkbox" '+(c[x[0]]?'checked':'')+'> '+x[1]+'</label>').join('')+'<button class="btn secondary" onclick="saveReleaseChecklist()">Save Release Checklist</button></div>'+ 
+  '<div class="card"><div class="small muted">PERSONAL PROPERTY INVENTORY</div><div class="inventory-boxes">'+[['wallet','Wallet / purse'],['tools','Tools'],['bags','Bags / luggage'],['electronics','Electronics'],['documents','Documents'],['loose_items','Loose property']].map(x=>'<label><input id="prop_'+x[0]+'" type="checkbox" '+(inv[x[0]]?'checked':'')+'> '+x[1]+'</label>').join('')+'</div><textarea id="propertyInventoryNotes" class="input" rows="2" placeholder="Property inventory notes">'+esc(inv.notes||'')+'</textarea><button class="btn secondary" onclick="savePropertyInventory()">Save Property Inventory</button><button class="btn secondary" onclick="takeLabeledPhoto(\'Personal property\')">Take Property Photo</button></div>'+ 
+  '<div class="card"><div class="small muted">REMINDERS</div><div class="row"><input id="reminderText" class="input" placeholder="Call insurance, check hold…"><input id="reminderDue" class="input" type="datetime-local"></div><button class="btn secondary" onclick="addReminder()">Add Reminder</button><div class="mini-list">'+(rems.slice().reverse().map(r=>'<div class="mini-item reminder-row"><div><b>'+esc(r.text||'Reminder')+'</b><div class="small muted">'+(r.due?esc(new Date(r.due).toLocaleString()):'No due time')+' · '+(r.done?'Done':'Open')+'</div></div><button class="link" onclick="toggleReminder(\''+esc(r.id)+'\')">'+(r.done?'Reopen':'Done')+'</button></div>').join('')||'<div class="muted small">No reminders.</div>')+'</div></div>'+ 
+  '<div class="card"><div class="small muted">PHOTO REQUIREMENTS</div>'+photoChecklistHtml(v)+'<div class="ops-grid"><button class="btn secondary" onclick="takeLabeledPhoto(\'Plate\')">Plate Photo</button><button class="btn secondary" onclick="takeLabeledPhoto(\'VIN\')">VIN Photo</button><button class="btn secondary" onclick="takeLabeledPhoto(\'Odometer\')">Odometer Photo</button><button class="btn secondary" onclick="takeLabeledPhoto(\'Damage\')">Damage Photo</button></div></div>'+ 
+  '<div class="card"><div class="small muted">CHANGE HISTORY / UNDO</div><p class="small muted">TowTag keeps the last 20 vehicle versions created by this build. Admin can restore one if a change was made by mistake.</p>'+((history.length)?history.slice().reverse().map(h=>'<div class="history-row"><div><span class="who">'+esc(h.by_name||'Staff')+'</span> · '+esc(h.description||'Changed vehicle')+'</div><div class="small muted">'+esc(new Date(h.at).toLocaleString())+'</div>'+(isAdminRole()?'<button class="link" onclick="restoreVehicleVersion(\''+esc(h.id)+'\')">Restore this version</button>':'')+'</div>').join(''):'<div class="muted small">History starts with the next vehicle change.</div>')+'</div>';
+}
+async function setDispatchState(state){if(!selected)return;await patchVehicleOps(selected,{dispatch_state:state},'Workflow changed to '+(DISPATCH_STATES.find(x=>x[0]===state)?.[1]||state));dailyOpsScreen();}
+async function saveJobAndSpot(){if(!selected)return;const id=selected.id,o={...opsData(selected),internal_job_number:val('opsJobNumber')||opsData(selected).internal_job_number||generateJobNumber()};await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({yard_spot:val('opsYardSpot')||null,ops_data:o})});await logOpsActivity(id,'yard_spot','Yard spot / job number updated');await load();selected=vehicles.find(v=>v.id===id);dailyOpsScreen();}
+async function saveCriticalNote(){if(!selected)return;await patchVehicleOps(selected,{critical_note:val('opsCriticalNote')||''},'Critical note updated',false);dailyOpsScreen();}
+async function addShiftNote(){if(!selected||!val('newShiftNote'))return;const arr=shiftNotesForVehicle(selected).slice();arr.push({id:'shift_'+Date.now().toString(36),text:val('newShiftNote'),priority:opsData(selected).problem_flag?'urgent':'normal',at:new Date().toISOString(),by:user?.id||null,by_name:staffMember?.display_name||user?.email||'Staff',resolved:false});await patchVehicleOps(selected,{shift_notes:arr},'Shift note added',false);dailyOpsScreen();}
+async function resolveShiftNote(id){if(!selected)return;const arr=shiftNotesForVehicle(selected).map(n=>n.id===id?{...n,resolved:true,resolved_at:new Date().toISOString(),resolved_by:staffMember?.display_name||'Staff'}:n);await patchVehicleOps(selected,{shift_notes:arr},'Shift note resolved',false);dailyOpsScreen();}
+async function saveCustomerPhone(){if(!selected)return;await patchVehicleOps(selected,{customer_phone:val('opsCustomerPhone')},'Customer phone updated',false);dailyOpsScreen();}
+async function addCallLog(){if(!selected)return;const arr=Array.isArray(opsData(selected).call_log)?opsData(selected).call_log.slice():[];arr.push({id:'call_'+Date.now().toString(36),type:val('callType')||'Contact',note:val('callNote'),at:new Date().toISOString(),by:user?.id||null,by_name:staffMember?.display_name||user?.email||'Staff'});await patchVehicleOps(selected,{call_log:arr.slice(-50)},(val('callType')||'Customer contact')+(val('callNote')?': '+val('callNote'):''),false);dailyOpsScreen();}
+async function saveKeyTracking(){if(!selected)return;const id=selected.id,next={...opsData(selected),key_location:val('opsKeyLocation')};await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({keys_status:val('opsKeysStatus')||'unknown',ops_data:next})});await logOpsActivity(id,'keys','Key tracking updated');await load();selected=vehicles.find(v=>v.id===id);dailyOpsScreen();}
+async function savePaymentStatus(){if(!selected)return;await patchVehicleOps(selected,{payment_status:val('opsPaymentStatus'),payment_method:val('opsPaymentMethod'),payment_updated_at:new Date().toISOString()},'Payment status updated',false);dailyOpsScreen();}
+async function saveReleaseChecklist(){if(!selected)return;const c={};['id_ready','hold_cleared','payment_handled','property_returned','keys_returned','signature_ready'].forEach(k=>c[k]=checked('release_'+k));await patchVehicleOps(selected,{release_checklist:c},'Release checklist updated',false);dailyOpsScreen();}
+async function savePropertyInventory(){if(!selected)return;const p={notes:val('propertyInventoryNotes')};['wallet','tools','bags','electronics','documents','loose_items'].forEach(k=>p[k]=checked('prop_'+k));await patchVehicleOps(selected,{property_inventory:p},'Personal property inventory updated',false);dailyOpsScreen();}
+async function addReminder(){if(!selected||!val('reminderText'))return;const arr=Array.isArray(opsData(selected).reminders)?opsData(selected).reminders.slice():[];arr.push({id:'rem_'+Date.now().toString(36),text:val('reminderText'),due:val('reminderDue')?new Date(val('reminderDue')).toISOString():null,done:false,created_at:new Date().toISOString(),by_name:staffMember?.display_name||'Staff'});await patchVehicleOps(selected,{reminders:arr.slice(-50)},'Reminder added: '+val('reminderText'),false);dailyOpsScreen();}
+async function toggleReminder(id){if(!selected)return;const arr=(opsData(selected).reminders||[]).map(r=>r.id===id?{...r,done:!r.done,done_at:!r.done?new Date().toISOString():null}:r);await patchVehicleOps(selected,{reminders:arr},'Reminder updated',false);dailyOpsScreen();}
+async function restoreVehicleVersion(historyId){
+  if(!selected||!isAdminRole())return;const h=(opsData(selected).change_history||[]).find(x=>x.id===historyId);if(!h?.snapshot)return;if(!confirm('Restore this older vehicle version?\n\nThe current version will stay in change history so this can be reversed.'))return;const id=selected.id,s={...h.snapshot};delete s.id;delete s.qr_token;delete s.created_by;delete s.created_at;delete s.updated_at;delete s.release_signature_data;await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(s)});await logOpsActivity(id,'undo','Admin restored an earlier vehicle version');await load();detail(id);alert('Earlier version restored.');
+}
+
+function dispatchBoard(){
+  selected=null;const active=activeYardVehicles();const byState={};DISPATCH_STATES.forEach(x=>byState[x[0]]=[]);active.forEach(v=>{const s=opsData(v).dispatch_state||'at_yard';(byState[s]||byState.at_yard).push(v)});
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Dispatch / To-Do</div><p class="muted">Move vehicles through the day without changing their legal TowTag status.</p><div class="dispatch-board">'+DISPATCH_STATES.slice(0,5).map(s=>'<div class="dispatch-col"><h3>'+esc(s[1])+' · '+byState[s[0]].length+'</h3>'+byState[s[0]].map(v=>'<button class="dispatch-card" onclick="detail(\''+v.id+'\')"><b>'+esc(title(v))+'</b><div class="small muted">'+esc(v.plate||'No plate')+(v.yard_spot?' · '+esc(v.yard_spot):'')+'</div></button>').join('')+'</div>').join('')+'</div>';
+}
+function yardSpotFinder(){selected=null;app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Yard Spot Finder</div><input id="yardFind" class="input" type="search" placeholder="Plate, VIN, vehicle, yard spot…" oninput="renderYardFinder()"><div id="yardFindRows"></div>';renderYardFinder();}
+function renderYardFinder(){const q=(val('yardFind')||'').toLowerCase();const rows=activeYardVehicles().filter(v=>!q||vehicleSearchText(v).includes(q)||String(v.yard_spot||'').toLowerCase().includes(q)||JSON.stringify(opsData(v)).toLowerCase().includes(q));el('yardFindRows').innerHTML=rows.map(v=>'<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="yard-spot-big">'+esc(v.yard_spot||'NO SPOT')+'</div><div class="small muted">'+esc(v.plate||v.vin||'No plate / VIN')+'</div></button>').join('')||'<div class="card muted">No matches.</div>';}
+function needsAttentionScreen(){selected=null;const rows=activeYardVehicles().filter(v=>dailyAttentionReasons(v).length).sort((a,b)=>dailyAttentionReasons(b).length-dailyAttentionReasons(a).length);app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Needs Attention</div><p class="muted">Missing info, problem flags, holds, due reminders, incomplete photos, release prep, or aging items.</p>'+rows.map(v=>'<button class="vehicle attention-item" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div class="small muted">'+esc(v.plate||'No plate')+(v.yard_spot?' · '+esc(v.yard_spot):'')+'</div><div class="reason">'+dailyAttentionReasons(v).map(esc).join(' · ')+'</div></button>').join('')||'<div class="card muted">Nothing needs attention right now.</div>';}
+function holdDashboard(){selected=null;const rows=activeYardVehicles().filter(v=>v.hold_type&&v.hold_type!=='none');app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Hold Dashboard</div><p class="muted">Every active hold in one place.</p>'+rows.map(v=>'<button class="vehicle" onclick="detail(\''+v.id+'\')"><h3>'+esc(title(v))+'</h3><div><span class="flag-pill">'+esc(holdLabel(v.hold_type))+'</span></div><div class="small" style="margin-top:7px">'+esc(v.hold_notes||'No hold notes')+'</div><div class="small muted">'+esc(v.plate||'No plate')+(v.yard_spot?' · '+esc(v.yard_spot):'')+'</div></button>').join('')||'<div class="card muted">No active holds.</div>';}
+function todayDashboard(){
+  selected=null;const active=activeYardVehicles(),ins=vehicles.filter(v=>isToday(v.tow_date)),outs=vehicles.filter(v=>isToday(v.release_at)),due=active.filter(v=>dueReminders(v).length),payments=[];vehicles.forEach(v=>savedInvoicePayments(v).filter(p=>p.date===todayDateKey()).forEach(p=>payments.push({v,p})));const paid=payments.reduce((s,x)=>s+genericMoney(x.p.amount),0);
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Today</div><div class="ops-stat-grid"><div class="ops-stat"><strong>'+ins.length+'</strong><span>VEHICLES IN</span></div><div class="ops-stat"><strong>'+outs.length+'</strong><span>RELEASED</span></div><div class="ops-stat"><strong>'+due.length+'</strong><span>REMINDERS DUE</span></div><div class="ops-stat"><strong>'+esc(money(paid))+'</strong><span>PAYMENTS</span></div></div><div class="today-section"><div class="small muted">IN TODAY</div>'+ins.map(v=>'<button class="vehicle" onclick="detail(\''+v.id+'\')">'+esc(title(v))+' · '+esc(v.plate||'No plate')+'</button>').join('')+'</div><div class="today-section"><div class="small muted">OUT TODAY</div>'+outs.map(v=>'<button class="vehicle" onclick="detail(\''+v.id+'\')">'+esc(title(v))+' · '+esc(v.released_to||'Released')+'</button>').join('')+'</div>';
+}
+function dailyCloseout(){
+  selected=null;const active=activeYardVehicles(),ins=vehicles.filter(v=>isToday(v.tow_date)),outs=vehicles.filter(v=>isToday(v.release_at)),needs=active.filter(v=>dailyAttentionReasons(v).length),holds=active.filter(v=>v.hold_type&&v.hold_type!=='none'),pending=active.filter(v=>(opsData(v).dispatch_state||'at_yard')!=='complete');let paid=0;vehicles.forEach(v=>savedInvoicePayments(v).filter(p=>p.date===todayDateKey()).forEach(p=>paid+=genericMoney(p.amount)));
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Daily Closeout</div><div class="card"><div class="kv"><div><span>Vehicles in</span>'+ins.length+'</div><div><span>Vehicles released</span>'+outs.length+'</div><div><span>Payments recorded</span>'+money(paid)+'</div><div><span>Active holds</span>'+holds.length+'</div><div><span>Need attention</span>'+needs.length+'</div><div><span>Open workflow items</span>'+pending.length+'</div></div><button class="btn secondary" onclick="printDailyCloseout()">Print / Save Closeout</button></div>'+shiftNotesHomeHtml()+(needs.length?'<div class="card"><div class="small muted">CARRY TO NEXT SHIFT</div>'+needs.slice(0,12).map(v=>'<button class="vehicle" onclick="detail(\''+v.id+'\')"><b>'+esc(title(v))+'</b><div class="small muted">'+dailyAttentionReasons(v).map(esc).join(' · ')+'</div></button>').join('')+'</div>':'');
+}
+function printDailyCloseout(){const html=app.innerHTML;const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><title>TowTag Daily Closeout</title><style>body{font-family:Arial;padding:24px}button,input{display:none}.card,.vehicle{border:1px solid #ccc;padding:10px;margin:8px 0;border-radius:8px}.muted,.small{color:#555}.ops-stat-grid,.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}</style><h1>Mike’s Cascade Towing — Daily Closeout</h1><div>'+esc(new Date().toLocaleString())+'</div>'+html);w.document.close();setTimeout(()=>w.print(),250);}
+function shiftNotesScreen(){selected=null;const rows=openShiftNotes();app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Shift Notes</div><p class="muted">Vehicle handoff notes that are still open.</p>'+rows.map(x=>'<button class="vehicle" onclick="detail(\''+x.v.id+'\')"><h3>'+esc(title(x.v))+'</h3><div>'+esc(x.n.text||'')+'</div><div class="small muted">'+esc(x.n.by_name||'Staff')+' · '+esc(new Date(x.n.at).toLocaleString())+'</div></button>').join('')||'<div class="card muted">No open shift notes.</div>';}
+function morningYardCheck(){selected=null;const rows=activeYardVehicles(),today=todayDateKey(),checkedRows=rows.filter(v=>String(opsData(v).yard_check?.date||'')===today);app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Morning Yard Check</div><p class="muted">'+checkedRows.length+' of '+rows.length+' vehicles checked today.</p>'+rows.map(v=>{const c=opsData(v).yard_check||{},done=c.date===today;return '<div class="card"><b>'+esc(title(v))+'</b><div class="small muted">'+esc(v.plate||'No plate')+' · '+esc(v.yard_spot||'NO YARD SPOT')+'</div>'+(done?'<div class="notice">Checked: '+esc(c.status||'Still here')+' · '+esc(c.by_name||'Staff')+'</div>':'<div class="ops-grid"><button class="btn secondary" onclick="markYardCheck(\''+v.id+'\',\'Still here\')">Still Here</button><button class="btn secondary" onclick="markYardCheck(\''+v.id+'\',\'Moved\')">Moved</button><button class="btn danger ops-wide" onclick="markYardCheck(\''+v.id+'\',\'Issue found\')">Issue Found</button></div>')+'</div>';}).join('')+'</div>';}
+async function markYardCheck(id,status){const v=vehicles.find(x=>x.id===id);if(!v)return;let note='';if(status==='Moved')note=prompt('New yard spot (optional):',v.yard_spot||'')||'';if(status==='Issue found')note=prompt('What issue did you find?','')||'';const partial={yard_check:{date:todayDateKey(),at:new Date().toISOString(),status,note,by_name:staffMember?.display_name||'Staff'},problem_flag:status==='Issue found'?true:opsData(v).problem_flag,problem_flag_note:status==='Issue found'?note:opsData(v).problem_flag_note};if(status==='Moved'&&note){await api('/rest/v1/vehicles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({yard_spot:note,ops_data:{...opsData(v),...partial}})});await logOpsActivity(id,'yard_check','Morning yard check: moved to '+note);await load();morningYardCheck();return}await patchVehicleOps(v,partial,'Morning yard check: '+status,false);morningYardCheck();}
+function printYardInventoryChecklist(){const rows=activeYardVehicles();const body=rows.map(v=>'<tr><td style="font-size:20px">☐</td><td>'+esc(v.yard_spot||'—')+'</td><td>'+esc(title(v))+'</td><td>'+esc(v.plate||'—')+'</td><td>'+esc(dispatchLabel(v))+'</td><td>'+esc(holdLabel(v.hold_type))+'</td></tr>').join('');const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the yard checklist.');return}w.document.write('<!doctype html><title>Yard Inventory Checklist</title><style>body{font-family:Arial;padding:24px}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #ccc;padding:9px;text-align:left}th{background:#eee}</style><h1>Mike’s Cascade Towing — Yard Inventory</h1><div>'+esc(new Date().toLocaleString())+'</div><table><thead><tr><th>Check</th><th>Spot</th><th>Vehicle</th><th>Plate</th><th>Workflow</th><th>Hold</th></tr></thead><tbody>'+body+'</tbody></table>');w.document.close();setTimeout(()=>w.print(),250);}
+
+function suggestedChargeDescriptions(v){
+  if(!v||v.record_type==='company_owned')return [];
+  const x=['Tow / service'];if(v.used_dollies)x.push('Dollies');if(v.winching_performed)x.push('Winching');if(v.recovery_performed)x.push('Recovery'+(v.recovery_minutes?' — '+v.recovery_minutes+' min':''));if(v.cleanup_performed)x.push(v.hazmat_cleanup?'Hazmat / absorbent cleanup':'Scene cleanup');if(v.extra_labor)x.push('Extra labor'+(v.extra_labor_minutes?' — '+v.extra_labor_minutes+' min':''));if(v.after_hours)x.push('After-hours service');if(Number(v.scene_wait_minutes)>0)x.push('Scene wait — '+v.scene_wait_minutes+' min');if(Number(v.billable_miles)>0)x.push('Mileage — '+v.billable_miles+' mi');return x;
+}
+billingCard=function(v){const base=_baseBillingCardDailyOps(v),suggestions=suggestedChargeDescriptions(v);return base+(suggestions.length?'<div class="card"><div class="small muted">CHARGE SUGGESTIONS</div><p class="small muted">TowTag spotted work that may need to be billed. It does not invent prices.</p>'+suggestions.map(x=>'<div style="padding:7px 0;border-bottom:1px solid var(--line)">☐ '+esc(x)+'</div>').join('')+'</div>':'');};
+invoiceForm=async function(){await _baseInvoiceFormDailyOps();setTimeout(()=>{const box=el('genericInvoiceLines')?.parentElement;if(box&&!el('addSuggestedChargesBtn')){const b=document.createElement('button');b.id='addSuggestedChargesBtn';b.type='button';b.className='btn secondary';b.textContent='Add Suggested Charge Lines';b.onclick=addSuggestedInvoiceLines;box.appendChild(b)}const ph=el('genericCustomerPhone');if(ph&&!ph.value&&selected)ph.value=opsData(selected).customer_phone||'';},0);};
+function addSuggestedInvoiceLines(){if(!selected)return;const existing=new Set([...document.querySelectorAll('.generic-desc')].map(x=>x.value.trim().toLowerCase()));suggestedChargeDescriptions(selected).forEach(d=>{if(!existing.has(d.toLowerCase()))addGenericInvoiceLine({description:d,amount:''})});recalcGenericInvoice();}
+
+releaseVehicle=async function(){
+  if(selected){const missing=releaseChecklistMissing(selected);if(missing.length&&!confirm('Release checklist is not complete:\n\n• '+missing.join('\n• ')+'\n\nContinue to release anyway?'))return;}
+  return _baseReleaseVehicleDailyOps();
+};
+customerNotificationScreen=function(){_baseCustomerNotificationScreenDailyOps();setTimeout(()=>{if(selected&&el('notifyPhone')&&!el('notifyPhone').value)el('notifyPhone').value=opsData(selected).customer_phone||invoiceStored(selected).generic_customer_phone||'';},0);};
+const _baseOpenCustomerMessageDailyOps=openCustomerMessage;
+openCustomerMessage=function(){if(selected){const phone=(val('notifyPhone')||'').trim();if(phone&&phone!==opsData(selected).customer_phone){patchVehicleOps(selected,{customer_phone:phone},'Customer phone updated',false).catch(()=>{});}const arr=Array.isArray(opsData(selected).call_log)?opsData(selected).call_log.slice():[];arr.push({id:'msg_'+Date.now().toString(36),type:'Text message prepared',note:(val('notifyTemplate')||'status')+' template',at:new Date().toISOString(),by_name:staffMember?.display_name||'Staff'});patchVehicleOps(selected,{call_log:arr.slice(-50)},'Customer text message prepared',false).catch(()=>{});}return _baseOpenCustomerMessageDailyOps();};
+
+lienTrackerCard=function(v){const base=_baseLienTrackerCardDailyOps(v),l=lienData(v);if(!l?.eligible_action_date)return base;const d=new Date(l.eligible_action_date+'T12:00:00'),delta=Math.ceil((d.getTime()-Date.now())/86400000);return base+'<div class="card"><div class="small muted">LIEN COUNTDOWN</div><div class="h1" style="margin-top:5px">'+(delta>0?delta+' day'+(delta===1?'':'s'):delta===0?'TODAY':Math.abs(delta)+' days past')+'</div><div class="muted">Eligible action date: '+esc(l.eligible_action_date)+'</div></div>';};
+
+loadActivity=async function(id){
+  const target=el('activity');if(!target)return;
+  try{const rows=await api('/rest/v1/vehicle_activity?select=event_type,description,actor_name,created_by,created_at&vehicle_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=75');target.innerHTML=(rows||[]).map(r=>'<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div>'+(r.actor_name?'<b>'+esc(r.actor_name)+'</b> — ':'')+esc(r.description)+'</div><div class="small muted" style="margin-top:3px">'+esc(new Date(r.created_at).toLocaleString())+'</div></div>').join('')||'<div class="muted">No activity recorded yet.</div>';}catch(e){target.innerHTML='<div class="error">History failed to load: '+esc(e.message)+'</div>'}
+};
+
+// ================== End Daily Ops Suite ==================
 
 const tag=new URLSearchParams(location.search).get('tag');
 if(passwordRecoveryFromUrl()){recoveryPasswordScreen()}
