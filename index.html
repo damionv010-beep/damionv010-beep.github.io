@@ -228,7 +228,7 @@ async function finishPasswordRecovery(){
   const p1=document.getElementById('recoveryPw')?.value||'',p2=document.getElementById('recoveryPw2')?.value||'';
   try{
     if(!session?.access_token)throw new Error('This reset link is no longer valid. Request a new one.');
-    if(p1.length<6)throw new Error('Password must be at least 6 characters.');
+    if(p1.length<12)throw new Error('Password must be at least 12 characters.');
     if(p1!==p2)throw new Error('Passwords do not match.');
     const r=await fetch(BASE+'/auth/v1/user',{method:'PUT',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({password:p1})});
     let d={};try{d=await r.json()}catch{}
@@ -246,7 +246,7 @@ function createAccountScreen(msg=''){
   '<label class="small muted">STAFF MEMBER</label><select id="newStaffName" class="input"><option value="Damion">Damion</option><option value="Mike">Mike</option></select>'+
   '<label class="small muted">EMAIL</label><input id="newEmail" class="input" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" value="'+esc(saved)+'">'+
   '<label class="small muted">PASSWORD</label>'+passwordField('newPw','new-password')+
-  '<div class="small muted" style="margin:-4px 0 10px">Use at least 6 characters. iPhone can save it to Passwords.</div>'+
+  '<div class="small muted" style="margin:-4px 0 10px">Use at least 12 characters. iPhone can save it to Passwords.</div>'+
   '<label class="small muted">STAFF ACCESS CODE</label><input id="staffCode" class="input" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="Mike’s Cascade staff code">'+
   '<button class="btn" onclick="createStaffAccount()">Create Account & Enter TowTag</button><button class="btn secondary" onclick="loginScreen()">Cancel</button></div></div>';
 }
@@ -264,7 +264,7 @@ async function createStaffAccount(){
   const code=(document.getElementById('staffCode')?.value||'').trim().toUpperCase();
   try{
     if(!e)throw new Error('Enter an email address.');
-    if(p.length<6)throw new Error('Password must be at least 6 characters.');
+    if(p.length<12)throw new Error('Password must be at least 12 characters.');
     if(!code)throw new Error('Enter the staff access code.');
     const r=await fetch(BASE+'/auth/v1/signup',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,data:{display_name:displayName}})});
     const d=await r.json();
@@ -799,7 +799,7 @@ async function copyVehicleInfo(){
     if(v.tow_number)lines.push('Tow / Case #: '+v.tow_number);
     if(agency)lines.push('Agency: '+agency);
     if(v.impound_type)lines.push('Reason: '+impoundLabel(v.impound_type));
-    if(v.tow_date)lines.push('Brought in: '+new Date(v.tow_date).toLocaleString());
+    if(v.tow_date)lines.push('Brought in: '+(arrivalDateKnown(v)?new Date(v.tow_date).toLocaleString():'Unknown'));
     if(v.yard_location)lines.push('Picked up from: '+v.yard_location);
     if(v.status)lines.push('Status: '+statusLabel(v.status));
   }else{
@@ -838,7 +838,7 @@ function printReleaseReceipt(){
   const agency=agencyForVehicle(v)?.name||'—',vehicle=title(v),plate=[v.plate_state,v.plate].filter(Boolean).join(' ')||'—';
   const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the release receipt.');return}
   const signature=v.release_signature_data?'<div class="sig"><div class="label">RELEASE SIGNATURE</div><img src="'+printEscape(v.release_signature_data)+'"></div>':'';
-  const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Release Receipt — '+printEscape(vehicle)+'</title><style>*{box-sizing:border-box}body{margin:0;background:#eee;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:20;background:#111;padding:10px;display:flex;gap:10px;justify-content:center}.toolbar button{border:0;border-radius:999px;padding:11px 17px;font-weight:800}.toolbar .back{background:#333;color:#fff}.sheet{max-width:760px;margin:0 auto;background:#fff;padding:32px}.brand{font-weight:900;font-size:14px;letter-spacing:.08em}.title{font-size:30px;font-weight:950;margin:5px 0 2px}.sub{color:#666}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:24px}.item{border-bottom:1px solid #ddd;padding:9px 0}.label{display:block;font-size:10px;font-weight:850;color:#666;letter-spacing:.08em;margin-bottom:3px}.wide{grid-column:1/-1}.sig{margin-top:26px}.sig img{display:block;margin-top:8px;max-width:420px;width:100%;height:auto;border:1px solid #bbb;background:#fff}.footer{border-top:2px solid #111;margin-top:30px;padding-top:12px;color:#666;font-size:11px}@media(max-width:560px){.sheet{padding:22px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:8mm}}</style></head><body><div class="toolbar"><button class="back" onclick="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href=\''+SITE+'\'}">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><div class="brand">MIKE’S CASCADE TOWING · TOWTAG</div><div class="title">Vehicle Release Receipt</div><div class="sub">Release acknowledgment / yard record</div><div class="grid"><div class="item"><span class="label">VEHICLE</span>'+printEscape(vehicle)+'</div><div class="item"><span class="label">PLATE</span>'+printEscape(plate)+'</div><div class="item"><span class="label">VIN</span>'+printEscape(v.vin||'—')+'</div><div class="item"><span class="label">TOW / CASE #</span>'+printEscape(v.tow_number||'—')+'</div><div class="item"><span class="label">AGENCY</span>'+printEscape(agency)+'</div><div class="item"><span class="label">TOW REASON</span>'+printEscape(impoundLabel(v.impound_type))+'</div><div class="item"><span class="label">TOW DATE</span>'+printEscape(v.tow_date?new Date(v.tow_date).toLocaleString():'—')+'</div><div class="item"><span class="label">RELEASED</span>'+printEscape(new Date(v.release_at).toLocaleString())+'</div><div class="item"><span class="label">RELEASED TO</span>'+printEscape(v.released_to||'—')+'</div><div class="item"><span class="label">ID CHECKED</span>'+(v.release_id_checked?'Yes':'No')+'</div><div class="item"><span class="label">AUTHORIZED BY</span>'+printEscape(v.release_authorized_by||'—')+'</div><div class="item wide"><span class="label">PICKED UP FROM</span>'+printEscape(v.yard_location||'—')+'</div><div class="item wide"><span class="label">RELEASE NOTES</span>'+printEscape(v.release_notes||'—')+'</div></div>'+signature+'<div class="footer">TowTag release record · '+printEscape(v.qr_token)+'</div></div></body></html>';
+  const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Release Receipt — '+printEscape(vehicle)+'</title><style>*{box-sizing:border-box}body{margin:0;background:#eee;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:20;background:#111;padding:10px;display:flex;gap:10px;justify-content:center}.toolbar button{border:0;border-radius:999px;padding:11px 17px;font-weight:800}.toolbar .back{background:#333;color:#fff}.sheet{max-width:760px;margin:0 auto;background:#fff;padding:32px}.brand{font-weight:900;font-size:14px;letter-spacing:.08em}.title{font-size:30px;font-weight:950;margin:5px 0 2px}.sub{color:#666}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:24px}.item{border-bottom:1px solid #ddd;padding:9px 0}.label{display:block;font-size:10px;font-weight:850;color:#666;letter-spacing:.08em;margin-bottom:3px}.wide{grid-column:1/-1}.sig{margin-top:26px}.sig img{display:block;margin-top:8px;max-width:420px;width:100%;height:auto;border:1px solid #bbb;background:#fff}.footer{border-top:2px solid #111;margin-top:30px;padding-top:12px;color:#666;font-size:11px}@media(max-width:560px){.sheet{padding:22px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}@media print{.toolbar{display:none}body{background:#fff}.sheet{max-width:none;padding:8mm}}</style></head><body><div class="toolbar"><button class="back" onclick="if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href=\''+SITE+'\'}">‹ Back to TowTag</button><button onclick="window.print()">Print / Save PDF</button></div><div class="sheet"><div class="brand">MIKE’S CASCADE TOWING · TOWTAG</div><div class="title">Vehicle Release Receipt</div><div class="sub">Release acknowledgment / yard record</div><div class="grid"><div class="item"><span class="label">VEHICLE</span>'+printEscape(vehicle)+'</div><div class="item"><span class="label">PLATE</span>'+printEscape(plate)+'</div><div class="item"><span class="label">VIN</span>'+printEscape(v.vin||'—')+'</div><div class="item"><span class="label">TOW / CASE #</span>'+printEscape(v.tow_number||'—')+'</div><div class="item"><span class="label">AGENCY</span>'+printEscape(agency)+'</div><div class="item"><span class="label">TOW REASON</span>'+printEscape(impoundLabel(v.impound_type))+'</div><div class="item"><span class="label">TOW DATE</span>'+printEscape(v.tow_date?(arrivalDateKnown(v)?new Date(v.tow_date).toLocaleString():'Unknown'):'—')+'</div><div class="item"><span class="label">RELEASED</span>'+printEscape(new Date(v.release_at).toLocaleString())+'</div><div class="item"><span class="label">RELEASED TO</span>'+printEscape(v.released_to||'—')+'</div><div class="item"><span class="label">ID CHECKED</span>'+(v.release_id_checked?'Yes':'No')+'</div><div class="item"><span class="label">AUTHORIZED BY</span>'+printEscape(v.release_authorized_by||'—')+'</div><div class="item wide"><span class="label">PICKED UP FROM</span>'+printEscape(v.yard_location||'—')+'</div><div class="item wide"><span class="label">RELEASE NOTES</span>'+printEscape(v.release_notes||'—')+'</div></div>'+signature+'<div class="footer">TowTag release record · '+printEscape(v.qr_token)+'</div></div></body></html>';
   w.document.open();w.document.write(html);w.document.close();
 }
 
@@ -851,8 +851,8 @@ function detail(id){
   const releaseCard=(!owned&&!v.deleted_at)?((v.release_at||v.status==='released')?
     '<div class="card" id="releaseCard"><div class="small muted">RELEASE RECORD</div>'+(v.release_at?'<div class="kv" style="margin-top:10px"><div><span>Released</span>'+esc(new Date(v.release_at).toLocaleString())+'</div><div><span>Released to</span>'+esc(v.released_to||'—')+'</div><div><span>ID checked</span>'+(v.release_id_checked?'Yes':'No')+'</div><div><span>Authorized by</span>'+esc(v.release_authorized_by||'—')+'</div><div style="grid-column:1/-1"><span>Release notes</span>'+esc(v.release_notes||'—')+'</div></div>':'<div class="notice">This vehicle is marked Released.</div>')+(v.release_signature_data?'<div class="small muted" style="margin-top:12px">RELEASE SIGNATURE</div><img class="signature-preview" src="'+esc(v.release_signature_data)+'">':'')+'<div class="quick-actions"><button class="btn" onclick="printReleaseReceipt()">Print Release Receipt</button><button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button></div></div>':
     '<div class="card" id="releaseCard"><div class="small muted">RELEASE VEHICLE</div><input id="releasedTo" class="input" placeholder="Released to (name)"><input id="releaseAuthorized" class="input" placeholder="Release authorized by"><label class="toggle"><input id="releaseIdChecked" type="checkbox"> ID checked</label><textarea id="releaseNotes" class="input" rows="3" placeholder="Release notes"></textarea><div class="small muted">RELEASE SIGNATURE</div><canvas id="releaseSignatureCanvas" class="signature-pad" width="600" height="180"></canvas><button class="btn secondary" type="button" onclick="clearReleaseSignature()">Clear Signature</button><button class="btn" onclick="releaseVehicle()">Release Vehicle</button></div>'):'';
-  const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Storage days</span>'+esc(storageDayText(v))+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Reason</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
-  '<div class="card kv"><div><span>Added</span>'+esc(new Date(v.tow_date).toLocaleString())+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
+  const towInfo=!owned?'<div class="card kv"><div><span>Tow date</span>'+esc((arrivalDateKnown(v)?new Date(v.tow_date).toLocaleString():'Unknown'))+'</div><div><span>Storage days</span>'+esc(storageDayText(v))+'</div><div><span>Tow / case #</span>'+esc(v.tow_number||'—')+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Reason</span>'+esc(impoundLabel(v.impound_type))+'</div><div><span>Driver</span>'+esc(v.driver_name||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Picked up from</span>'+esc(v.yard_location||'—')+'</div><div><span>Hold</span>'+esc(holdLabel(v.hold_type))+'</div><div><span>Hold notes</span>'+esc(v.hold_notes||'—')+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Personal property</span>'+esc(v.property_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>':
+  '<div class="card kv"><div><span>Added</span>'+esc((arrivalDateKnown(v)?new Date(v.tow_date).toLocaleString():'Unknown'))+'</div><div><span>Plate</span>'+esc(v.plate||'—')+' '+esc(v.plate_state||'')+'</div><div><span>VIN</span>'+esc(v.vin||'—')+'</div><div><span>Odometer</span>'+esc(fmtOdo(v.odometer))+'</div><div><span>Keys</span>'+esc(keysLabel(v.keys_status))+'</div><div style="grid-column:1/-1"><span>Condition / damage</span>'+esc(v.condition_notes||'—')+'</div><div style="grid-column:1/-1"><span>Staff notes</span>'+esc(v.notes||'—')+'</div></div>';
   const statusCard=(!owned&&!v.deleted_at)?'<div class="card"><div class="small muted">VEHICLE STATUS</div>'+(v.status==='auction'?'<div class="notice">This is an older record that was previously marked Auction. Auction is no longer available for new records.</div>':'')+'<select id="vehicleStatus" class="input">'+statusOptions(v.status)+'</select><button class="btn" onclick="updateVehicleStatus()">Save Status</button></div>':'';
   const archiveCard=v.deleted_at?'<div class="card"><div class="small muted">TRASH</div><div class="error">Moved to Trash '+esc(new Date(v.deleted_at).toLocaleString())+'. The record is recoverable until you permanently delete it.</div><button class="btn" onclick="restoreTrashedVehicle()">Restore Vehicle</button></div>':(v.archived_at?'<div class="card"><div class="small muted">ARCHIVED</div><div class="notice">This vehicle left the active yard list on '+esc(new Date(v.archived_at).toLocaleString())+'. All photos, invoices, billing and TowTag data are still saved.</div>'+((v.release_at||v.status==='released')?'<button class="btn secondary" onclick="undoRelease()">Undo Release & Return to Yard</button>':'<button class="btn secondary" onclick="restoreVehicle()">Restore to Active Vehicles</button>')+'</div>':'<div class="card"><div class="small muted">ARCHIVE</div><p class="muted">Use this when the vehicle has left the yard. Nothing is deleted.</p><button class="btn secondary" onclick="archiveVehicle()">Archive Vehicle</button></div>');
   app.innerHTML='<button class="link" onclick="home()">‹ Vehicles</button><div class="h1">'+esc(title(v))+'</div><div class="muted">'+esc(v.color||'Color not listed')+' · '+esc(recordLabel(v.record_type||'tow'))+' · <span class="pill '+(v.deleted_at?'trash-pill':'')+'">'+esc(v.deleted_at?'Trash':badge)+'</span></div>'+quickActionsCard(v,owned)+towInfo+damageSummaryCard(v)+lienTrackerCard(v)+attentionCard(v)+agencyCard(v)+ownedCard(v)+billingCard(v)+
@@ -1113,11 +1113,11 @@ async function printTowSheet(){
     }catch(e){console.warn('Print photos unavailable',e)}
     const vehicleName=title(v);
     const fields=owned?[
-      ['Record Type','Company Owned'],['Disposition',ownedLabel(v.owned_disposition)],['Added',new Date(v.tow_date).toLocaleString()],
+      ['Record Type','Company Owned'],['Disposition',ownedLabel(v.owned_disposition)],['Added',(arrivalDateKnown(v)?new Date(v.tow_date).toLocaleString():'Unknown')],
       ['Plate',(v.plate||'—')+' '+(v.plate_state||'')],['VIN',v.vin||'—'],['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],
       ['Asking Price',money(v.asking_price)],['Sale / Scrap Amount',money(v.disposition_amount)]
     ]:[
-      ['Tow Date / Time',new Date(v.tow_date).toLocaleString()],['Tow / Case #',v.tow_number||'—'],['Driver',v.driver_name||'—'],
+      ['Tow Date / Time',(arrivalDateKnown(v)?new Date(v.tow_date).toLocaleString():'Unknown')],['Tow / Case #',v.tow_number||'—'],['Driver',v.driver_name||'—'],
       ['Reason',impoundLabel(v.impound_type)],['Plate',(v.plate||'—')+' '+(v.plate_state||'')],['VIN',v.vin||'—'],
       ['Odometer',fmtOdo(v.odometer)],['Keys',keysLabel(v.keys_status)],['Storage Days',storageDayText(v)],['Picked Up From',v.yard_location||'—'],
       ['Hold',holdLabel(v.hold_type)],['Status',statusLabel(v.status)]
@@ -1899,51 +1899,9 @@ async function previewTowTagBackup(file){
   catch(e){pendingTowTagBackup=null;alert(e.message||'Backup could not be read.');}
 }
 async function restoreTowTagBackup(){
-  if(!isAdminRole()||!pendingTowTagBackup)return;
-  const b=pendingTowTagBackup;
-  if(!confirm('Restore / merge this TowTag backup?\n\nExisting records with the same IDs may be updated. Records not in the backup will NOT be deleted. Staff logins and passwords will NOT be changed.'))return;
-  try{
-    if(!await ensureSession())throw new Error('Sign in required');
-    const vehicleKeys=['id','qr_token','agency_id','tow_date','year','make','model','color','plate','plate_state','vin','status','yard_location','notes','created_by','created_at','updated_at','impound_type','tow_number','driver_name','odometer','keys_status','yard_spot','condition_notes','property_notes','hold_type','hold_notes','release_at','released_to','release_id_checked','release_authorized_by','release_notes','record_type','owned_disposition','asking_price','disposition_amount','disposition_completed_at','owned_notes','equipment_type','used_dollies','recovery_performed','recovery_minutes','winching_performed','cleanup_performed','hazmat_cleanup','extra_labor','extra_labor_minutes','after_hours','scene_wait_minutes','billable_miles','other_billable_work','billing_notes','invoice_number','invoice_data','invoice_updated_at','archived_at','archived_by','deleted_at','deleted_by','release_signature_data','lien_data','damage_data','ops_data'];
-    const photoKeys=['id','vehicle_id','storage_path','caption','sort_order','created_by','created_at'];
-    const docKeys=['id','vehicle_id','storage_path','file_name','content_type','document_type','notes','uploaded_by','created_at'];
-    const activityKeys=['id','vehicle_id','event_type','description','created_by','created_at','actor_name'];
-    const pick=(row,keys)=>{const out={};if(!row||typeof row!=='object'||Array.isArray(row))return out;keys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(row,k))out[k]=row[k]});return out};
-    const chunks=(arr,n)=>{const out=[];for(let i=0;i<arr.length;i+=n)out.push(arr.slice(i,i+n));return out};
-    const upsert=async(table,rows)=>{if(!rows.length)return;await _towtagCoreApi('/rest/v1/'+table+'?on_conflict=id',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal,missing=default'},body:JSON.stringify(rows)});};
-    const warnings=[];
-    const agencyNameByOldId=new Map((Array.isArray(b.agencies)?b.agencies:[]).map(a=>[String(a.id||''),String(a.name||'').toUpperCase()]));
-    const agencyIdByName=new Map((agencyRows||[]).map(a=>[String(a.name||'').toUpperCase(),a.id]));
-    const validAgencyIds=new Set((agencyRows||[]).map(a=>String(a.id)));
-    let restoredVehicles=0;
-    for(const raw of b.vehicles||[]){
-      if(!raw?.id)continue;
-      const current=vehicles.find(v=>v.id===raw.id)||{};
-      const clean={};
-      vehicleKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(current,k))clean[k]=current[k];if(Object.prototype.hasOwnProperty.call(raw,k))clean[k]=raw[k];});
-      clean.id=raw.id;clean.created_by=null;clean.archived_by=null;clean.deleted_by=null;
-      if(clean.agency_id&&!validAgencyIds.has(String(clean.agency_id))){const name=agencyNameByOldId.get(String(clean.agency_id));clean.agency_id=name&&agencyIdByName.get(name)?agencyIdByName.get(name):null;}
-      await upsert('vehicles',[clean]);restoredVehicles++;
-    }
-    const restoredVehicleIds=new Set((b.vehicles||[]).map(v=>String(v?.id||'')).filter(Boolean));
-    const photos=(Array.isArray(b.vehicle_photos)?b.vehicle_photos:[]).filter(x=>x?.id&&x?.vehicle_id&&x?.storage_path&&(restoredVehicleIds.has(String(x.vehicle_id))||vehicles.some(v=>v.id===x.vehicle_id))).map(x=>{const y=pick(x,photoKeys);y.created_by=null;return y});
-    try{for(const part of chunks(photos,100))await upsert('vehicle_photos',part)}catch(e){warnings.push('Some photo metadata could not be restored: '+(e.message||e));}
-    const docs=(Array.isArray(b.vehicle_documents)?b.vehicle_documents:[]).filter(x=>x?.id&&x?.vehicle_id&&x?.storage_path&&x?.file_name&&(restoredVehicleIds.has(String(x.vehicle_id))||vehicles.some(v=>v.id===x.vehicle_id))).map(x=>{const y=pick(x,docKeys);y.uploaded_by=null;return y});
-    try{for(const part of chunks(docs,100))await upsert('vehicle_documents',part)}catch(e){warnings.push('Some document metadata could not be restored: '+(e.message||e));}
-    let restoredActivity=0;
-    const activity=(Array.isArray(b.vehicle_activity)?b.vehicle_activity:[]).filter(x=>x?.id&&x?.vehicle_id&&x?.event_type&&x?.description).map(x=>{const y=pick(x,activityKeys);y.created_by=null;return y});
-    try{
-      for(const part of chunks(activity,150)){
-        const ids=part.map(x=>x.id).filter(Boolean);
-        const existing=ids.length?await _towtagCoreApi('/rest/v1/vehicle_activity?select=id&id=in.('+ids.map(encodeURIComponent).join(',')+')'):[];
-        const have=new Set((existing||[]).map(x=>x.id));const missing=part.filter(x=>!have.has(x.id));
-        if(missing.length){await _towtagCoreApi('/rest/v1/vehicle_activity',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(missing)});restoredActivity+=missing.length;}
-      }
-    }catch(e){warnings.push('Some activity history could not be restored: '+(e.message||e));}
-    pendingTowTagBackup=null;await load();
-    alert('TowTag backup restore completed. '+restoredVehicles+' vehicle records merged.'+(warnings.length?'\n\nWarnings:\n• '+warnings.join('\n• '):'')+'\n\nPhoto/document files are available when their stored files still exist. Staff passwords were not changed.');
-    exportCenter();
-  }catch(e){alert('Restore stopped: '+(e.message||e));}
+  if(!isAdminRole()||!pendingTowTagBackup)return;const b=pendingTowTagBackup;if(!confirm('Restore / merge this TowTag backup?\n\nExisting vehicle records with the same IDs may be updated. Records not in the backup will NOT be deleted.'))return;
+  try{if(!await ensureSession())throw new Error('Sign in required');const r=await fetch(BASE+'/functions/v1/towtag-restore-backup',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({backup:b})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Restore failed');pendingTowTagBackup=null;await load();alert('TowTag backup restore completed. '+(d.vehicles||0)+' vehicle records merged. Photo/document files are available when their stored files still exist. Staff passwords were not changed.');exportCenter();}
+  catch(e){alert('Restore stopped: '+(e.message||e));}
 }
 function exportCenter(){
   if(!isAdminRole()){alert('Admin access required.');return}
@@ -2306,4 +2264,205 @@ else{
     if(session){user=session.user;boot()}else loginScreen()
   }catch{loginScreen()}
 }
-</script></body></html>
+</script>
+<style>
+/* TowTag clean home + unknown arrival dates */
+.home-clean-top{align-items:flex-start;margin-bottom:5px}
+.home-clean-menu{font-size:16px;padding:8px 2px;white-space:nowrap}
+.home-clean-status{font-size:12px;margin-top:3px}
+.home-clean-primary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+.home-clean-primary .btn{margin-top:0;min-height:54px;padding:12px 9px}
+.home-clean-primary .wide{grid-column:1/-1;min-height:62px;font-size:18px}
+.home-clean-tools{margin-top:9px!important;background:#101419!important;color:#cfd7df!important;border:1px solid #35414d!important}
+.home-clean-vehicles{margin-top:18px}
+.home-clean-heading{display:flex;align-items:center;justify-content:space-between;margin:0 1px 7px}
+.home-clean-search{display:grid;grid-template-columns:minmax(0,1fr) 122px;gap:8px;align-items:center}
+.home-clean-search .input{margin:0;height:48px}
+.home-clean-filter{height:48px;margin:0;background:#101419;color:#fff;border:1px solid #35414d;border-radius:12px;padding:0 9px;font-weight:800}
+.home-clean-today{font-size:11px;color:var(--muted);text-align:center;margin:8px 0 0}
+.yard-tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.yard-tools-grid .btn{margin-top:0}
+.yard-tools-grid .wide{grid-column:1/-1}
+.home-menu-card .btn{margin-top:9px}
+.arrival-date-card .arrival-help{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.35}
+.arrival-date-card .toggle{margin:8px 0 6px}
+.arrival-unknown-badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#3b2710;color:#ffd28a;font-size:11px;font-weight:850;margin-top:5px}
+@media(max-width:560px){
+  .home-clean-search{grid-template-columns:minmax(0,1fr) 112px}
+  .home-clean-primary{gap:8px}
+  .yard-tools-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+<script>
+function arrivalDateKnown(v){
+  if(!v)return true;
+  const d=(typeof opsData==='function')?opsData(v):(v.ops_data&&typeof v.ops_data==='object'?v.ops_data:{});
+  return d.intake_date_known!==false;
+}
+function arrivalDateText(v){
+  if(!arrivalDateKnown(v)||!v?.tow_date)return 'Unknown';
+  const d=new Date(v.tow_date);
+  return Number.isNaN(d.getTime())?'Unknown':d.toLocaleString();
+}
+function localNowForInput(){return localDateTimeValue(new Date().toISOString());}
+function toggleIntakeArrivalDate(){
+  const unknown=checked('arrivalUnknown'),input=el('arrivalDate');
+  if(!input)return;
+  input.disabled=unknown;input.style.opacity=unknown?'.5':'1';
+  if(!unknown&&!input.value)input.value=localNowForInput();
+}
+function toggleEditArrivalDate(){
+  const unknown=checked('editArrivalUnknown'),input=el('editArrivalDate');
+  if(!input)return;
+  input.disabled=unknown;input.style.opacity=unknown?'.5':'1';
+  if(!unknown&&!input.value)input.value=localNowForInput();
+}
+function intakeArrivalCard(){
+  return '<div class="card arrival-date-card"><div class="small muted">ARRIVAL / YARD DATE</div><label class="toggle"><input id="arrivalUnknown" type="checkbox" onchange="toggleIntakeArrivalDate()"> Exact date unknown / vehicle was already in the yard</label><input id="arrivalDate" class="input" type="datetime-local" value="'+esc(localNowForInput())+'"><div class="arrival-help">Use Unknown for older vehicles when nobody knows the actual day they came in. TowTag will not invent storage days.</div></div>';
+}
+function editArrivalCard(v){
+  const known=arrivalDateKnown(v),value=known?localDateTimeValue(v.tow_date):'';
+  return '<div class="card arrival-date-card"><div class="small muted">ARRIVAL / YARD DATE</div><label class="toggle"><input id="editArrivalUnknown" type="checkbox" '+(!known?'checked':'')+' onchange="toggleEditArrivalDate()"> Exact date unknown / vehicle was already in the yard</label><input id="editArrivalDate" class="input" type="datetime-local" value="'+esc(value)+'" '+(!known?'disabled':'')+'><div class="arrival-help">If you learn the real date later, uncheck Unknown and enter it here. Storage will then calculate from that date.</div></div>';
+}
+function enrichArrivalBody(body,editing=false){
+  body={...(body||{})};
+  const unknown=editing?checked('editArrivalUnknown'):checked('arrivalUnknown');
+  const dateValue=editing?val('editArrivalDate'):val('arrivalDate');
+  const currentOps=editing&&selected?((typeof opsData==='function')?opsData(selected):(selected.ops_data||{})):{};
+  const known=!unknown;
+  if(known){
+    if(!dateValue)throw new Error('Enter the arrival date/time or mark the date Unknown.');
+    const parsed=new Date(dateValue);
+    if(Number.isNaN(parsed.getTime()))throw new Error('Arrival date/time is invalid.');
+    body.tow_date=parsed.toISOString();
+  }else if(!editing||!selected?.tow_date){
+    body.tow_date=new Date().toISOString();
+  }
+  body.ops_data={...currentOps,...(body.ops_data||{}),intake_date_known:known,intake_date_marked_at:new Date().toISOString(),intake_date_note:known?null:'Pre-existing yard vehicle; exact arrival date unknown'};
+  return body;
+}
+
+const __originalStorageDayCount=storageDayCount;
+storageDayCount=function(v,endOverride=null){return arrivalDateKnown(v)?__originalStorageDayCount(v,endOverride):0;};
+const __originalStorageDayText=storageDayText;
+storageDayText=function(v){return arrivalDateKnown(v)?__originalStorageDayText(v):'Unknown';};
+const __originalRecordAgeDays=recordAgeDays;
+recordAgeDays=function(v){return arrivalDateKnown(v)?__originalRecordAgeDays(v):0;};
+
+const __originalAddForm=addForm;
+addForm=function(notice=''){
+  __originalAddForm(notice);
+  const typeCard=el('recordType')?.closest('.card');
+  if(typeCard&&!el('arrivalDate'))typeCard.insertAdjacentHTML('afterend',intakeArrivalCard());
+  setTimeout(toggleIntakeArrivalDate,0);
+};
+
+const __originalEditVehicleForm=editVehicleForm;
+editVehicleForm=function(){
+  __originalEditVehicleForm();
+  if(!selected||el('editArrivalDate'))return;
+  const vehicleCard=el('editKeys')?.closest('.card');
+  if(vehicleCard)vehicleCard.insertAdjacentHTML('afterend',editArrivalCard(selected));
+  const oldInput=el('editTowDate');
+  if(oldInput){
+    oldInput.style.display='none';
+    const prev=oldInput.previousElementSibling;
+    if(prev&&prev.classList.contains('muted'))prev.style.display='none';
+  }
+  setTimeout(toggleEditArrivalDate,0);
+};
+
+const __originalApi=api;
+api=async function(path,options={}){
+  const method=String(options?.method||'GET').toUpperCase();
+  let nextOptions=options;
+  if(options?.body&&method==='POST'&&path==='/rest/v1/vehicles'&&el('arrivalDate')){
+    const parsed=typeof options.body==='string'?JSON.parse(options.body):options.body;
+    nextOptions={...options,body:JSON.stringify(enrichArrivalBody(parsed,false))};
+  }else if(options?.body&&method==='PATCH'&&path.startsWith('/rest/v1/vehicles?id=eq.')&&el('editArrivalDate')&&selected){
+    const parsed=typeof options.body==='string'?JSON.parse(options.body):options.body;
+    nextOptions={...options,body:JSON.stringify(enrichArrivalBody(parsed,true))};
+  }
+  return __originalApi(path,nextOptions);
+};
+
+const __originalQueueOfflineIntake=queueOfflineIntake;
+queueOfflineIntake=function(body,agencyName){
+  if(el('arrivalDate'))body=enrichArrivalBody(body,false);
+  return __originalQueueOfflineIntake(body,agencyName);
+};
+
+const __originalInvoiceMergeDefaults=invoiceMergeDefaults;
+invoiceMergeDefaults=function(v,agencyName=''){
+  const d=__originalInvoiceMergeDefaults(v,agencyName);
+  if(!arrivalDateKnown(v)){
+    d.time_call='';d.date_in='';d.time_start='';d.storage_from='';d.storage_days='';
+  }
+  return d;
+};
+
+function setDetailKvValue(label,value){
+  app.querySelectorAll('.kv div').forEach(node=>{
+    const span=node.querySelector(':scope > span');
+    if(span&&span.textContent.trim()===label){
+      while(span.nextSibling)span.nextSibling.remove();
+      node.append(document.createTextNode(value));
+    }
+  });
+}
+const __originalDetail=detail;
+detail=function(id){
+  __originalDetail(id);
+  if(selected&&!arrivalDateKnown(selected)){
+    setDetailKvValue('Tow date','Unknown');
+    setDetailKvValue('Added','Unknown');
+    setDetailKvValue('Storage days','Unknown');
+    const clock=app.querySelector('.storage-clock');
+    if(clock)clock.innerHTML='<div><strong>—</strong><span>storage days</span></div><div class="small muted">Arrival date unknown — no automatic storage calculation</div>';
+  }
+};
+
+home=function(){
+  selected=null;
+  const live=vehicles.filter(v=>!v.deleted_at);
+  const active=live.filter(v=>!v.archived_at);
+  const mode=currentOpsMode();
+  const queuedCount=offlineIntakes().length;
+  const inToday=active.filter(v=>arrivalDateKnown(v)&&isToday(v.tow_date)).length;
+  const outToday=vehicles.filter(v=>isToday(v.release_at)).length;
+  const holds=active.filter(v=>v.hold_type&&v.hold_type!=='none').length;
+  const attention=active.filter(v=>dailyAttentionReasons(v).length).length;
+  const unknownDates=active.filter(v=>v.record_type!=='company_owned'&&!arrivalDateKnown(v)).length;
+  const primary=mode==='driver'
+    ? '<div class="home-clean-primary"><button class="btn wide" onclick="addForm()">+ Quick Intake</button><button class="btn secondary" onclick="dispatchBoard()">Dispatch / To-Do</button><button class="btn secondary" onclick="needsAttentionScreen()">Needs Attention'+(attention?' ('+attention+')':'')+'</button></div>'
+    : '<div class="home-clean-primary"><button class="btn wide" onclick="todayDashboard()">Today</button><button class="btn secondary" onclick="holdDashboard()">Hold Dashboard</button><button class="btn secondary" onclick="needsAttentionScreen()">Needs Attention'+(attention?' ('+attention+')':'')+'</button></div>';
+  app.innerHTML=
+    '<div class="top home-clean-top"><div>'+BRAND_HTML+'<div class="muted home-clean-status">'+active.length+' active · '+holds+' holds · '+attention+' attention'+(unknownDates?' · '+unknownDates+' unknown date'+(unknownDates===1?'':'s'):'')+'</div></div><button class="link home-clean-menu" onclick="homeMenuScreen()">Menu</button></div>'+ 
+    '<div class="mode-switch"><button class="'+(mode==='driver'?'active':'')+'" onclick="setOpsMode(\'driver\')">Driver</button><button class="'+(mode==='office'?'active':'')+'" onclick="setOpsMode(\'office\')">Office</button></div>'+ 
+    '<div class="home-clean-today">Today: '+inToday+' in · '+outToday+' out</div>'+ 
+    primary+
+    '<button class="btn secondary home-clean-tools" onclick="yardToolsScreen()">More / Yard Tools</button>'+ 
+    dueReminderBannerHtml()+
+    (queuedCount?'<button class="btn secondary" onclick="syncOfflineIntakes()">Sync '+queuedCount+' Saved Intake'+(queuedCount===1?'':'s')+'</button>':'')+
+    '<div class="home-clean-vehicles"><div class="home-clean-heading"><div class="small muted">VEHICLES</div></div><div class="home-clean-search"><input id="search" class="input" type="search" autocomplete="off" placeholder="Search plate, VIN, job #…" oninput="render(this.value)"><select id="homeFilterSelect" class="home-clean-filter" onchange="setHomeFilterSelect(this.value)"><option value="all">Active</option><option value="tow">Tows</option><option value="sale">For Sale</option><option value="scrap">Scrap</option><option value="archive">Archive</option><option value="trash">Trash</option></select></div><div id="list"></div></div>';
+  homeFilter='all';
+  render('');
+};
+function setHomeFilterSelect(mode){homeFilter=mode||'all';render(val('search'));}
+function homeMenuScreen(){
+  selected=null;
+  const admin=isAdminRole()?'<button class="btn secondary" onclick="adminStaffScreen()">Staff</button><button class="btn secondary" onclick="exportCenter()">Export / Backup</button>':'';
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Menu</div><div class="card home-menu-card"><div class="small muted">ACCOUNT & APP</div>'+admin+'<button class="btn secondary" onclick="requestReminderAlerts()">Reminder Alerts</button><button class="btn danger" onclick="logout()">Sign Out</button></div>';
+}
+function yardToolsScreen(){
+  selected=null;
+  const mode=currentOpsMode();
+  const notes=openShiftNotes().length;
+  const recent=recentStripHtml();
+  const driver='<button class="btn secondary" onclick="yardSpotFinder()">Yard Spot Finder</button><button class="btn secondary" onclick="morningYardCheck()">Morning Yard Check</button><button class="btn secondary" onclick="shiftNotesScreen()">Shift Notes'+(notes?' ('+notes+')':'')+'</button><button class="btn secondary" onclick="requestReminderAlerts()">Reminder Alerts</button><button class="btn secondary wide" onclick="alert(\'Use the iPhone Camera app to scan a TowTag QR code.\')">Scan TowTag QR</button>';
+  const office='<button class="btn secondary" onclick="yardReport()">Yard Report</button><button class="btn secondary" onclick="dailyCloseout()">Daily Closeout</button><button class="btn secondary" onclick="printYardInventoryChecklist()">Print Yard Checklist</button><button class="btn secondary" onclick="agingAlertsScreen()">Lien / Aging Alerts</button><button class="btn secondary" onclick="dispatchBoard()">Dispatch / To-Do</button><button class="btn secondary" onclick="shiftNotesScreen()">Shift Notes'+(notes?' ('+notes+')':'')+'</button>';
+  app.innerHTML='<button class="link" onclick="home()">‹ Dashboard</button><div class="h1">Yard Tools</div><p class="muted">Everything that does not need to live on the opening screen.</p><div class="card"><div class="small muted">'+(mode==='driver'?'DRIVER TOOLS':'OFFICE TOOLS')+'</div><div class="yard-tools-grid">'+(mode==='driver'?driver:office)+'</div></div>'+recent;
+}
+</script>
+
+</body></html>
