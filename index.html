@@ -2867,10 +2867,10 @@ function towtagWrapSave(name,label){
 
 
 <script>
-/* ===== TowTag photo display hotfix 2026-09-13 v4 =====
-   Legacy photos do not have thumb_path. Show them automatically instead of forcing a tap.
-   New photos continue to use small generated thumbnails when available. */
-window.TOWTAG_PHOTO_DISPLAY_FIX='2026-09-13-v4';
+/* ===== TowTag photo display hotfix 2026-09-13 v5 =====
+   iPhone/Safari fix: never wait for a hidden lazy image to load before showing it.
+   Legacy photos still fall back to the original file; new photos use thumbnails when available. */
+window.TOWTAG_PHOTO_DISPLAY_FIX='2026-09-13-v5';
 
 hydrateVehicleListThumbs=async function(rows){
   const work=(rows||[]).slice(0,60).map(async v=>{
@@ -2901,24 +2901,41 @@ loadStaffPhotos=async function(){
     const hasThumb=!!p.thumb_path;
     const click=hasThumb?`onclick="openFullVehiclePhoto('${esc(p.id)}')"`:'';
     const cursor=hasThumb?'cursor:zoom-in;':'';
-    return `<figure style="position:relative"><div class="photo-auto-wrap" style="min-height:120px;background:#101419;display:grid;place-items:center"><div class="muted small" data-photo-loading="${esc(p.id)}">Loading photo…</div><img data-staff-photo="${esc(p.id)}" alt="${esc(p.caption||'Vehicle photo')}" loading="lazy" decoding="async" style="display:none;width:100%;${cursor}" ${click}></div><figcaption>${esc(p.caption||'Vehicle photo')}</figcaption><div class="photo-actions"><button class="photo-move" type="button" onclick="photoMovePicker('${esc(p.id)}')">Move</button><button class="photo-delete" type="button" onclick="deleteVehiclePhoto('${esc(p.id)}')">Delete</button></div></figure>`;
+    return `<figure style="position:relative"><div class="photo-auto-wrap" style="min-height:120px;background:#101419;display:grid;place-items:center;overflow:hidden"><div class="muted small" data-photo-loading="${esc(p.id)}">Loading photo…</div><img data-staff-photo="${esc(p.id)}" alt="${esc(p.caption||'Vehicle photo')}" decoding="async" style="display:none;width:100%;height:auto;${cursor}" ${click}></div><figcaption>${esc(p.caption||'Vehicle photo')}</figcaption><div class="photo-actions"><button class="photo-move" type="button" onclick="photoMovePicker('${esc(p.id)}')">Move</button><button class="photo-delete" type="button" onclick="deleteVehiclePhoto('${esc(p.id)}')">Delete</button></div></figure>`;
   }).join('')||'<div class="muted">No photos yet.</div>';
 
   await Promise.all(rows.map(async p=>{
     const path=p.thumb_path||p.storage_path;
-    if(!path)return;
+    const loading=app.querySelector('[data-photo-loading="'+p.id+'"]');
+    const img=app.querySelector('img[data-staff-photo="'+p.id+'"]');
+    if(!path){if(loading)loading.textContent='Photo unavailable';return;}
     try{
-      const url=await towtagSignPhotoPath(path,p.thumb_path?86400:21600);
-      const img=app.querySelector('img[data-staff-photo="'+p.id+'"]');
-      const loading=app.querySelector('[data-photo-loading="'+p.id+'"]');
-      if(url&&img){
-        img.onload=()=>{img.style.display='block';if(loading)loading.remove();};
-        img.onerror=()=>{if(loading)loading.textContent='Photo unavailable';};
-        img.src=url;
-      }
+      const url=await Promise.race([
+        towtagSignPhotoPath(path,p.thumb_path?86400:21600),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Photo link timed out')),12000))
+      ]);
+      if(!url||!img)throw new Error('Could not create photo link');
+
+      // iOS Safari can defer a lazy image forever while it is display:none.
+      // Make it renderable before assigning src, then fade it in after the bytes arrive.
+      img.removeAttribute('loading');
+      img.style.display='block';
+      img.style.opacity='0';
+      img.style.transition='opacity .15s ease';
+      img.onload=()=>{
+        img.style.opacity='1';
+        if(loading)loading.remove();
+      };
+      img.onerror=()=>{
+        img.style.display='none';
+        if(loading){loading.textContent='Photo unavailable — tap to retry';loading.style.cursor='pointer';loading.onclick=()=>loadStaffPhotos();}
+      };
+      img.src=url;
+
+      // Cached images can already be complete before the load callback is observed.
+      if(img.complete&&img.naturalWidth>0){img.style.opacity='1';if(loading)loading.remove();}
     }catch(e){
-      const loading=app.querySelector('[data-photo-loading="'+p.id+'"]');
-      if(loading)loading.textContent='Photo unavailable';
+      if(loading){loading.textContent='Photo unavailable — tap to retry';loading.style.cursor='pointer';loading.onclick=()=>loadStaffPhotos();}
       console.warn('Photo preview failed',e);
     }
   }));
