@@ -2713,4 +2713,156 @@ render=function(q){
 };
 </script>
 
+
+<script>
+/* ===== TowTag hotfix 2026-09-13: Daily Ops + photo egress ===== */
+window.TOWTAG_HOTFIX='2026-09-13-daily-ops-photo-v3';
+let towtagPendingPhotoLabel='';
+
+function towtagToast(message,isError=false){
+  let n=document.getElementById('towtagHotfixToast');
+  if(!n){
+    n=document.createElement('div');n.id='towtagHotfixToast';
+    n.style.cssText='position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:99999;max-width:calc(100vw - 32px);padding:12px 16px;border-radius:999px;font-weight:850;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.45);transition:opacity .2s';
+    document.body.appendChild(n);
+  }
+  n.textContent=message;n.style.background=isError?'#5b1d24':'#20320f';n.style.color=isError?'#ffd2d7':'#cfffaa';n.style.border='1px solid '+(isError?'#91404a':'#4f7728');n.style.opacity='1';
+  clearTimeout(n._timer);n._timer=setTimeout(()=>{n.style.opacity='0'},1800);
+}
+
+/* Load thumbnail metadata without downloading image bytes. */
+load=async function(){
+  const [v,p,d,a]=await Promise.all([
+    api('/rest/v1/vehicles?select=*&order=tow_date.desc'),
+    api('/rest/v1/vehicle_photos?select=id,vehicle_id,storage_path,thumb_path,caption,sort_order,created_by,created_at&order=created_at.asc'),
+    api('/rest/v1/vehicle_documents?select=id,vehicle_id,storage_path,file_name,content_type,document_type,notes,created_at&order=created_at.desc'),
+    api('/rest/v1/agencies?select=*&order=name')
+  ]);
+  vehicles=v||[];photoRows=p||[];documentRows=d||[];agencyRows=a||[];billingProfiles=[];
+};
+
+async function towtagSignPhotoPath(path,expiresIn=3600){
+  if(!path)return '';
+  const encoded=String(path).split('/').map(encodeURIComponent).join('/');
+  const r=await api('/storage/v1/object/sign/vehicle-photos/'+encoded,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({expiresIn})});
+  let u=r?.signedURL||r?.signedUrl||r?.signed_url||'';
+  if(!u)return '';
+  if(u.startsWith('/storage/v1/'))u=BASE+u;else if(u.startsWith('/'))u=BASE+'/storage/v1'+u;
+  return u;
+}
+
+/* Vehicle list only loads small thumbnail files. Old originals stay unloaded. */
+signVehicleThumb=async function(path){
+  if(!path)return '';
+  if(vehicleThumbUrlCache[path])return vehicleThumbUrlCache[path];
+  const u=await towtagSignPhotoPath(path,86400);if(u)vehicleThumbUrlCache[path]=u;return u;
+};
+hydrateVehicleListThumbs=async function(rows){
+  const work=(rows||[]).slice(0,60).map(async v=>{
+    const photo=vehicleThumbPhotoRow(v),img=app.querySelector('img[data-thumb-vehicle="'+v.id+'"]');
+    if(!img)return;
+    const box=img.closest('.vehicle-list-thumb'),ph=box?.querySelector('.vehicle-thumb-placeholder');
+    if(!photo){if(ph)ph.textContent='No Photo';return;}
+    if(!photo.thumb_path){if(ph)ph.textContent='Photo on file';return;}
+    try{const url=await signVehicleThumb(photo.thumb_path);if(url){img.loading='lazy';img.src=url;img.style.display='block';}}
+    catch(e){if(ph)ph.textContent='Photo on file';console.warn('Thumb failed',e)}
+  });
+  await Promise.all(work);
+};
+
+/* Staff gallery uses thumbnails; full evidence photo loads only when tapped. */
+async function openFullVehiclePhoto(photoId){
+  const p=photoRows.find(x=>x.id===photoId);if(!p)return;
+  const img=app.querySelector('img[data-staff-photo="'+photoId+'"]'),btn=app.querySelector('button[data-load-photo="'+photoId+'"]');
+  try{
+    if(btn){btn.disabled=true;btn.textContent='Loading full photo…';}
+    const url=await towtagSignPhotoPath(p.storage_path,3600);if(!url)throw new Error('Could not create photo link.');
+    if(img){img.src=url;img.style.display='block';img.dataset.full='1';}
+    if(btn)btn.remove();
+  }catch(e){if(btn){btn.disabled=false;btn.textContent='Tap to load photo';}towtagToast('Photo failed: '+e.message,true)}
+}
+loadStaffPhotos=async function(){
+  const target=el('staffPhotos');if(!target||!selected)return;
+  const rows=vehiclePhotoRows(selected);
+  target.innerHTML=rows.map(p=>`<figure style="position:relative"><img data-staff-photo="${esc(p.id)}" alt="${esc(p.caption||'Vehicle photo')}" loading="lazy" style="display:none;cursor:zoom-in" onclick="openFullVehiclePhoto('${esc(p.id)}')"><button class="btn secondary" data-load-photo="${esc(p.id)}" type="button" style="margin:8px;width:calc(100% - 16px)" onclick="openFullVehiclePhoto('${esc(p.id)}')">${p.thumb_path?'Loading preview…':'Tap to load photo'}</button><figcaption>${esc(p.caption||'Vehicle photo')}</figcaption><div class="photo-actions"><button class="photo-move" type="button" onclick="photoMovePicker('${esc(p.id)}')">Move</button><button class="photo-delete" type="button" onclick="deleteVehiclePhoto('${esc(p.id)}')">Delete</button></div></figure>`).join('')||'<div class="muted">No photos yet.</div>';
+  await Promise.all(rows.map(async p=>{
+    if(!p.thumb_path)return;
+    try{const url=await towtagSignPhotoPath(p.thumb_path,86400),img=app.querySelector('img[data-staff-photo="'+p.id+'"]'),btn=app.querySelector('button[data-load-photo="'+p.id+'"]');if(url&&img){img.src=url;img.style.display='block';}if(btn)btn.textContent='Tap photo for full size';}catch(e){console.warn('Preview failed',e)}
+  }));
+};
+
+/* Camera works from Daily Ops even though the normal media inputs are not on that screen. */
+takeLabeledPhoto=function(label){
+  towtagPendingPhotoLabel=label||'Vehicle photo';
+  if(el('photoCaption'))el('photoCaption').value=towtagPendingPhotoLabel;
+  const existing=el('cameraPhoto');
+  if(existing){existing.value='';existing.click();return;}
+  const input=document.createElement('input');
+  input.type='file';input.accept='image/*';input.setAttribute('capture','environment');input.style.display='none';
+  input.onchange=async()=>{try{await uploadPhotos(input.files)}finally{input.remove()}};
+  document.body.appendChild(input);input.click();
+};
+
+function towtagResizeImage(file,maxDimension,quality){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{try{
+      const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)throw new Error('Image dimensions unavailable');
+      const scale=Math.min(1,maxDimension/Math.max(w,h)),cw=Math.max(1,Math.round(w*scale)),ch=Math.max(1,Math.round(h*scale));
+      const c=document.createElement('canvas');c.width=cw;c.height=ch;const ctx=c.getContext('2d',{alpha:false});ctx.drawImage(img,0,0,cw,ch);
+      c.toBlob(blob=>{URL.revokeObjectURL(url);blob?resolve(blob):reject(new Error('Could not compress photo'));},'image/jpeg',quality);
+    }catch(e){URL.revokeObjectURL(url);reject(e)}};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Photo format could not be resized on this device.'));};img.src=url;
+  });
+}
+async function towtagPreparePhoto(file){
+  let mainBlob=file,mainExt=(file.name&&file.name.includes('.')?file.name.split('.').pop():'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  let mainType=file.type||({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',heif:'image/heif'}[mainExt]||'application/octet-stream'),thumbBlob=null;
+  try{const b=await towtagResizeImage(file,2560,.82);if(b&&b.size<file.size){mainBlob=b;mainExt='jpg';mainType='image/jpeg';}}catch(e){console.warn('Main resize skipped',e)}
+  try{thumbBlob=await towtagResizeImage(file,420,.68);}catch(e){console.warn('Thumbnail skipped',e)}
+  return {mainBlob,mainExt,mainType,thumbBlob};
+}
+uploadPhotos=async function(fileList){
+  if(!selected)return;const files=Array.from(fileList||[]);if(!files.length)return;
+  const vehicleId=selected.id,label=towtagPendingPhotoLabel||el('photoCaption')?.value||'Vehicle photo';
+  try{
+    for(let i=0;i<files.length;i++){
+      const prepared=await towtagPreparePhoto(files[i]),stem=vehicleId+'/'+Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,8),path=stem+'.'+prepared.mainExt,thumbPath=prepared.thumbBlob?stem+'-thumb.jpg':null;
+      await api('/storage/v1/object/vehicle-photos/'+path,{method:'POST',headers:{'Content-Type':prepared.mainType,'x-upsert':'false','cache-control':'max-age=31536000'},body:prepared.mainBlob});
+      if(thumbPath)await api('/storage/v1/object/vehicle-photos/'+thumbPath,{method:'POST',headers:{'Content-Type':'image/jpeg','x-upsert':'false','cache-control':'max-age=31536000'},body:prepared.thumbBlob});
+      await api('/rest/v1/vehicle_photos',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({vehicle_id:vehicleId,storage_path:path,thumb_path:thumbPath,caption:label,created_by:user.id})});
+      try{await logOpsActivity(vehicleId,'photo_added',label+' photo added')}catch{}
+    }
+    towtagPendingPhotoLabel='';await load();selected=vehicles.find(v=>v.id===vehicleId);if(el('staffPhotos'))await loadStaffPhotos();
+    towtagToast(files.length===1?'Photo saved':'Photos saved');
+    if(document.querySelector('.h1')?.textContent==='Daily Ops')dailyOpsScreen();
+  }catch(e){towtagPendingPhotoLabel='';towtagToast('Photo upload failed: '+e.message,true);alert('Photo upload failed: '+e.message)}
+};
+
+/* Delete thumbnail too when a photo is removed. */
+const __towtagDeletePhoto=window.deleteVehiclePhoto;
+deleteVehiclePhoto=async function(photoId){
+  if(!selected||!photoId)return;if(!confirm('Delete this photo from '+title(selected)+'?\n\nOnly this photo will be removed. The vehicle record will stay intact.'))return;
+  const p=photoRows.find(x=>x.id===photoId),vehicleId=selected.id;
+  try{
+    if(p?.thumb_path){try{await api('/storage/v1/object/vehicle-photos/'+p.thumb_path.split('/').map(encodeURIComponent).join('/'),{method:'DELETE'});}catch(e){console.warn('Thumbnail cleanup failed',e)}}
+    if(!await ensureSession())throw new Error('Sign in required');
+    const r=await fetch(BASE+'/functions/v1/towtag-live?action=photo-delete',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({photoId,vehicleId})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Photo delete failed');await load();selected=vehicles.find(v=>v.id===vehicleId);if(el('staffPhotos'))await loadStaffPhotos();towtagToast('Photo deleted');
+  }catch(e){towtagToast('Could not delete photo: '+e.message,true)}
+};
+
+/* Clear visual feedback for Daily Ops save buttons. */
+function towtagWrapSave(name,label){
+  const fn=window[name];if(typeof fn!=='function'||fn.__towtagWrapped)return;
+  const wrapped=async function(...args){try{await fn.apply(this,args);towtagToast(label||'Saved');}catch(e){console.error(name,e);towtagToast('Save failed: '+(e?.message||e),true);alert('Could not save: '+(e?.message||e));}};
+  wrapped.__towtagWrapped=true;window[name]=wrapped;
+}
+[
+ ['saveJobAndSpot','Job # / yard spot saved'],['saveCriticalNote','Critical note saved'],['saveCustomerPhone','Phone saved'],
+ ['saveKeyTracking','Key tracking saved'],['savePaymentStatus','Payment status saved'],['saveReleaseChecklist','Release checklist saved'],
+ ['savePropertyInventory','Property inventory saved'],['addShiftNote','Shift note saved'],['addCallLog','Contact log saved'],['addReminder','Reminder saved']
+].forEach(x=>towtagWrapSave(x[0],x[1]));
+</script>
+
 </body></html>
