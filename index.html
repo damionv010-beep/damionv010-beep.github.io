@@ -2942,4 +2942,140 @@ loadStaffPhotos=async function(){
 };
 </script>
 
+
+<script>
+/* ===== TowTag full-app stability audit 2026-09-13 v2 =====
+   - Invoice opens immediately; auto-numbering no longer blocks the screen.
+   - Optional gallery/document/agency fetch failures no longer take down the whole app.
+   - Common async UI failures are surfaced instead of silently disappearing. */
+window.TOWTAG_STABILITY_AUDIT='2026-09-13-v2';
+const TOWTAG_PENDING_INVOICE_MARKER='__TOWTAG_PENDING_INVOICE_NUMBER__';
+
+function towtagPromiseTimeout(promise,ms,message){
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message||'Request timed out')),ms)})
+  ]).finally(()=>clearTimeout(timer));
+}
+
+/* Keep the vehicle list as the required dataset, but let non-critical panels recover independently. */
+load=async function(){
+  const previousPhotos=Array.isArray(photoRows)?photoRows:[];
+  const previousDocs=Array.isArray(documentRows)?documentRows:[];
+  const previousAgencies=Array.isArray(agencyRows)?agencyRows:[];
+  const safeOptional=async(path,fallback,label)=>{
+    try{return await towtagPromiseTimeout(api(path),15000,label+' load timed out')}
+    catch(e){console.warn(label+' load failed',e);return fallback}
+  };
+  const v=await towtagPromiseTimeout(api('/rest/v1/vehicles?select=*&order=tow_date.desc'),25000,'Vehicle list timed out. Check your connection and try again.');
+  const [p,d,a]=await Promise.all([
+    safeOptional('/rest/v1/vehicle_photos?select=id,vehicle_id,storage_path,thumb_path,caption,sort_order,created_by,created_at&order=created_at.asc',previousPhotos,'Photos'),
+    safeOptional('/rest/v1/vehicle_documents?select=id,vehicle_id,storage_path,file_name,content_type,document_type,notes,created_at&order=created_at.desc',previousDocs,'Documents'),
+    safeOptional('/rest/v1/agencies?select=*&order=name',previousAgencies,'Agencies')
+  ]);
+  vehicles=Array.isArray(v)?v:[];
+  photoRows=Array.isArray(p)?p:previousPhotos;
+  documentRows=Array.isArray(d)?d:previousDocs;
+  agencyRows=Array.isArray(a)?a:previousAgencies;
+  billingProfiles=[];
+};
+
+/* Generate invoice numbers without overwriting a number a staff member may have entered while the request was in flight. */
+ensureInvoiceNumber=async function(v){
+  if(!v?.id)throw new Error('Vehicle record is unavailable.');
+  const local=String(v.invoice_number||'').trim();
+  if(local&&local!==TOWTAG_PENDING_INVOICE_MARKER)return local;
+  const id=encodeURIComponent(v.id);
+  const readCurrent=async()=>{
+    const rows=await api('/rest/v1/vehicles?select=invoice_number&id=eq.'+id+'&limit=1');
+    const value=String(rows?.[0]?.invoice_number||'').trim();
+    if(value){v.invoice_number=value;return value}
+    return '';
+  };
+  const existing=await readCurrent();
+  if(existing)return existing;
+  const n=await api('/rest/v1/rpc/next_towtag_invoice_number',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const number=String(n??'').replace(/^"|"$/g,'').trim();
+  if(!number)throw new Error('Could not generate an invoice number.');
+  const rows=await api('/rest/v1/vehicles?id=eq.'+id+'&invoice_number=is.null',{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({invoice_number:number})});
+  const saved=String(rows?.[0]?.invoice_number||'').trim();
+  if(saved){v.invoice_number=saved;return saved}
+  const raced=await readCurrent();
+  if(raced)return raced;
+  throw new Error('Could not save the invoice number.');
+};
+
+/* The old invoice path waited on the RPC before drawing anything. On a slow mobile request that looked like a dead button. */
+const __towtagAuditedInvoiceOpen=invoiceForm;
+invoiceForm=async function(){
+  if(!selected||selected.record_type==='company_owned')return;
+  const v=selected;
+  const needsNumber=!v.invoice_number;
+  const pendingMarker=TOWTAG_PENDING_INVOICE_MARKER;
+
+  if(needsNumber)v.invoice_number=pendingMarker;
+  try{
+    await __towtagAuditedInvoiceOpen();
+  }catch(e){
+    if(needsNumber&&v.invoice_number===pendingMarker)v.invoice_number=null;
+    console.error('Invoice open failed',e);
+    if(typeof towtagToast==='function')towtagToast('Could not open invoice: '+(e?.message||e),true);
+    else alert('Could not open invoice: '+(e?.message||e));
+    return;
+  }
+
+  if(!needsNumber)return;
+  if(v.invoice_number===pendingMarker)v.invoice_number=null;
+  const numberField=el('genericInvoiceNumber')||el('invNumber');
+  if(numberField&&numberField.value===pendingMarker)numberField.value='';
+
+  let status=el('towtagInvoiceNumberStatus');
+  if(numberField&&!status){
+    status=document.createElement('div');
+    status.id='towtagInvoiceNumberStatus';
+    status.className='small muted';
+    status.style.marginTop='8px';
+    status.textContent='Getting invoice number… You can keep working.';
+    numberField.parentElement?.parentElement?.appendChild(status);
+  }
+
+  (async()=>{
+    try{
+      const number=await towtagPromiseTimeout(ensureInvoiceNumber(v),10000,'Invoice number request timed out');
+      const field=el('genericInvoiceNumber')||el('invNumber');
+      if(selected?.id===v.id&&field&&!String(field.value||'').trim())field.value=String(number||'');
+      const note=el('towtagInvoiceNumberStatus');if(note)note.textContent=number?'Invoice number ready.':'Invoice number can be entered manually.';
+    }catch(e){
+      console.warn('Automatic invoice number unavailable',e);
+      const note=el('towtagInvoiceNumberStatus');
+      if(note)note.textContent='Auto-number unavailable right now — you can still save this invoice.';
+      if(typeof towtagToast==='function')towtagToast('Invoice opened — auto-number is temporarily unavailable',true);
+    }
+  })();
+};
+
+/* Sharing can reject when the native share sheet is dismissed; cancellation should not become an app error. */
+if(typeof shareTag==='function'){
+  const __towtagAuditedShareTag=shareTag;
+  shareTag=async function(){
+    try{return await __towtagAuditedShareTag.apply(this,arguments)}
+    catch(e){
+      if(e?.name==='AbortError')return;
+      console.error('Share failed',e);
+      if(typeof towtagToast==='function')towtagToast('Could not share: '+(e?.message||e),true);
+    }
+  };
+}
+
+/* Inline async button handlers otherwise fail silently in mobile Safari. */
+window.addEventListener('unhandledrejection',function(event){
+  const reason=event.reason;
+  if(reason?.name==='AbortError')return;
+  console.error('Unhandled TowTag action error',reason);
+  if(typeof towtagToast==='function')towtagToast('Action failed: '+(reason?.message||String(reason||'Unknown error')),true);
+  event.preventDefault();
+});
+</script>
+
 </body></html>
